@@ -233,6 +233,7 @@ function Login(){
                             error={errors.email}
                             helperText={errors.emailError}
                             size="small"
+                            required
                             fullWidth/>
 
                         <TextField
@@ -243,6 +244,7 @@ function Login(){
                             error={errors.email}
                             helperText={errors.emailError}
                             size="small"
+                            required
                             fullWidth/>
 
                         <TextField

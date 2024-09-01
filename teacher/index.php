@@ -1,6 +1,6 @@
 <?php 
 session_start();
-if (isset($_SESSION['student_id'])) {
+if (isset($_SESSION['user_id'])) {
 	$name = $_SESSION['name'];
 }
 else{
@@ -11,7 +11,7 @@ else{
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>Student Page | <?=$name;?></title>
+	<title>Teacher Page | <?=$name;?></title>
 	<?php require '../admin/links.php';?>
 	<style type="text/css">
 		.menu-button.active{
@@ -68,7 +68,7 @@ else{
 <div id="root"></div>
 </body>
 <?php 
-if (isset($_SESSION['student_id'])) {
+if (isset($_SESSION['user_id'])) {
 	if (strpos(strtolower($_SERVER['HTTP_USER_AGENT']), "android") OR strpos(strtolower($_SERVER['HTTP_USER_AGENT']), "iphone")) {
 		$files = [
 			'jsx/mobile.jsx',
@@ -77,7 +77,7 @@ if (isset($_SESSION['student_id'])) {
 	}
 	else{
 		$files = [
-			'jsx/admin.jsx',
+			'jsx/teacher.jsx',
 			'jsx/Strings.ts'
 		];
 	}

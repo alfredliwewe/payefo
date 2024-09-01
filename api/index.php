@@ -28,7 +28,7 @@ if (isset($_POST['email_login'], $_POST['password'])) {
 		}
 	}
 	else{
-		$sqll = $db->query("SELECT * FROM staff WHERE phone = '$phone' ");
+		$sqll = $db->query("SELECT * FROM staff WHERE phone = '$phone' OR email = '$phone' ");
 		
 		if ($sqll->num_rows > 0) {
 			$data = $sqll->fetch_assoc();
@@ -37,11 +37,11 @@ if (isset($_POST['email_login'], $_POST['password'])) {
 				# success...
 				$_SESSION['user_id'] = $data['id'];
 				$_SESSION['phone'] = $data['phone'];
-				$_SESSION['fullname'] = $data['fullname'];
-				$_SESSION['role'] = $data['role'];
+				$_SESSION['name'] = $data['name'];
+				//$_SESSION['role'] = $data['role'];
 
 				$data['status'] = true;
-				$data['link'] = $data['role'].'/';
+				$data['link'] = 'teacher/';
 
 				//echo json_encode(['status' => true, 'link' => $data['role'].'/']);
 				echo json_encode($data);

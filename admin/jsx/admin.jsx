@@ -45,7 +45,7 @@ let theme = createTheme({
                     textTransform:"none"
                 },
                 paper:{
-                    borderRadius:"16px"
+                    borderRadius:"24px"
                 }
             }
         },
@@ -74,6 +74,10 @@ window.onload = function(){
 
 function Index(){
     const [page,setPage]= useState("Home"); //Home
+    const [settings,setSettings] = useState({
+        logo:"clogo.png",
+        name:"School"
+    })
     
     const menus = [
         {
@@ -85,7 +89,7 @@ function Index(){
             icon:"fa fa-user-friends"
         },
         {
-            title:"Users",
+            title:"Students",
             icon:"fa fa-list-ol"
         },
         {
@@ -93,8 +97,16 @@ function Index(){
             icon:"fa fa-user-friends text-danger"
         },
         {
+            title:"Teachers",
+            icon:"fa fa-user-friends text-danger"
+        },
+        {
             title:"Emails",
             icon:"fa fa-envelope"
+        },
+        {
+            title:"Settings",
+            icon:"fa fa-wrench"
         },
         {
             title:"System Values",
@@ -105,12 +117,23 @@ function Index(){
             icon:"fa fa-user"
         }
     ]
+
+    const getData = () => {
+        $.get("api/", {getSettings2:"true"}, res=>{
+            setSettings({...settings, ...res});
+        })
+    }
+
+    useEffect(()=>{
+        getData();
+    }, []);
+
     return (
         <Context.Provider value={{page,setPage}}>
             <div className="w3-row">
                 <div className="w3-col w3-border-right" style={{height:window.innerHeight+"px",overflow:"auto",width:"200px"}}>
                     <div className="w3-center pt-3 pb-3">
-                        <img src={"../images/logo.png"} height="40" />
+                        <img src={"../uploads/"+settings.logo} height="40" />
                     </div>
                     {menus.map((row,index)=>(
                         <MenuButton data={row} key={row.title} isActive={page == row.title} onClick={()=>setPage(row.title)} />
@@ -131,10 +154,10 @@ function Index(){
                 <div className="w3-rest" style={{height:window.innerHeight+"px",overflow:"auto"}}>
                     {page == "Home" ? <Home />:
                     page == "Faculties" ? <Faculties />:
-                    page == "Countries" ? <Countries />:
+                    page == "Students" ? <Students />:
                     page == "Programmes" ? <Programmes />:
-                    page == "Staff" ? <Staff />:
-                    page == "Languages" ? <Languages />:
+                    page == "Teachers" ? <AvailableStaff />:
+                    page == "Settings" ? <ControlPanel />:
                     page == "Packages" ? <MainPackages />:
                     page == "Emails" ? <Emails />:
                     page == "System Values" ? <Settings />:
@@ -443,11 +466,11 @@ function Emails(){
     const [active,setActive] = useState({});
 
     const getEmails = () => {
-        $.get("api/", {getEmails:"true"}, res=>setEmails(res));
+        //$.get("api/", {getEmails:"true"}, res=>setEmails(res));
     }
 
     const getEmailHeads = () => {
-        $.get("api/", {getEmailHeads:email},res=>setHeads(res));
+        //$.get("api/", {getEmailHeads:email},res=>setHeads(res));
     }
 
     useEffect(()=>{
@@ -511,14 +534,14 @@ function CloseHeading(props){
     return (
         <>
             <div className={"clearfix "+(props.className != undefined ? props.className : "")}>
-                <font className="w3-large">{props.label}</font>
+                <font className="w3-large sansmedium">{props.label}</font>
 
-                <span className="bg-gray-200 w3-round-large bcenter float-right pointer hover:bg-gray-300" onClick={e=>{
+                <span className="bg-gray-2001 w3-round-large bcenter float-right pointer hover:bg-gray-300 border" onClick={e=>{
                     if(props.onClose != undefined){
                         props.onClose(e);
                     }
-                }} style={{height:"36px",width:"36px"}}>
-                    <i className="fa fa-times text-lg"/>
+                }} style={{height:"30px",width:"30px"}}>
+                    <i className="fa fa-times"/>
                 </span>
             </div>
         </>
@@ -607,40 +630,8 @@ function TabPanel(props) {
     );
 }
 
-function Staff(){
-    const [value, setValue] = React.useState(0);
-
-    const handleChange = (event, newValue) => {
-        setValue(newValue);
-    };
-
-    return (
-        <>
-            <Box sx={{ width: '100%' }}>
-                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                    <Tabs value={value} onChange={handleChange} aria-label="basic tabs example" sx={{minHeight:"unset"}}>
-                        <Tab label="Available Staff" icon={<i className="far fa-user" />} iconPosition="start" {...a11yProps(0)} sx={{minHeight:"unset"}}/>
-                        <Tab label="Categories" icon={<i className="fa fa-list-ol" />} iconPosition="start" {...a11yProps(1)} sx={{minHeight:"unset"}} />
-                        <Tab label="Permissions" icon={<i className="fa fa-lock" />} iconPosition="start" {...a11yProps(2)} sx={{minHeight:"unset"}} />
-                    </Tabs>
-                </Box>
-                <TabPanel value={value} index={0}>
-                    <AvailableStaff />
-                </TabPanel>
-                <TabPanel value={value} index={1}>
-                    <StaffCategories />
-                </TabPanel>
-                <TabPanel value={value} index={2}>
-                    <StaffPermissions />
-                </TabPanel>
-            </Box>
-        </>
-    )
-}
-
 function AvailableStaff(){
     const [rows,setRows] = useState([]);
-    const [categories,setCategories] = useState([]);
     const [permissions,setPermissions] = useState([]);
     const [active,setActive] = useState({});
     const [open,setOpen] = useState({
@@ -648,10 +639,6 @@ function AvailableStaff(){
         edit:false
     });
     const [selectedPermissions, setSelectedPermissions] = useState([]);
-
-    const getStaffCategories = () => {
-        $.get("api/", {getStaffCategories:"true"}, res=>setCategories(res));
-    }
 
     const saveStaff = (event) => {
         event.preventDefault();
@@ -701,21 +688,9 @@ function AvailableStaff(){
         $.get("api/", {getStaff:"true"}, res=>setRows(res));
     }
 
-    const getStaffPermissions = () => {
-        $.get("api/", {getStaffPermissions:"true"}, res=>setPermissions(res));
-    }
-
     useEffect(()=>{
         getRows();
-        getStaffCategories();
-        getStaffPermissions();
     }, []);
-
-    useEffect(()=>{
-        if(active.permissions != undefined){
-            setSelectedPermissions(active.permissions.split(","))
-        }
-    }, [active])
 
     return (
         <>
@@ -723,19 +698,14 @@ function AvailableStaff(){
                 <Button variant="contained" sx={{textTransform:"none"}} onClick={e=>setOpen({...open, add:true})}>Add Staff</Button>
             </Box>
             <Paper sx={{m:2}}>
-                <table className="w3-table w3-table-all">
+                <Table>
                     <TableHead>
                         <TableRow>
                             <TableCell>#</TableCell>
                             <TableCell>Name</TableCell>
                             <TableCell>Email</TableCell>
-                            <TableCell>National ID</TableCell>
-                            <TableCell>Category</TableCell>
-                            <TableCell>Emp No</TableCell>
                             <TableCell>Phone</TableCell>
                             <TableCell>Picture</TableCell>
-                            <TableCell>Emergency</TableCell>
-                            <TableCell>Permissions</TableCell>
                             <TableCell>Status</TableCell>
                             <TableCell>Action</TableCell>
                         </TableRow>
@@ -746,13 +716,8 @@ function AvailableStaff(){
                                 <TableCell padding="none" sx={{pl:2}}>{index+1}</TableCell>
                                 <TableCell padding="none">{row.name}</TableCell>
                                 <TableCell padding="none">{row.email}</TableCell>
-                                <TableCell padding="none">{row.national_id}</TableCell>
-                                <TableCell padding="none">{row.category_data.name}</TableCell>
-                                <TableCell padding="none">{row.employement_number}</TableCell>
                                 <TableCell padding="none">{row.phone}</TableCell>
                                 <TableCell padding="none">{row.picture}</TableCell>
-                                <TableCell padding="none">{row.emergency_contact}</TableCell>
-                                <TableCell padding="none">{row.permissions}</TableCell>
                                 <TableCell padding="none">{row.status}</TableCell>
                                 <TableCell sx={{padding:"7px"}}>
                                     <Button variant="contained" size="small" onClick={e=>{
@@ -763,25 +728,17 @@ function AvailableStaff(){
                             </TableRow>
                         ))}
                     </TableBody>
-                </table>
+                </Table>
             </Paper>
 
             <Dialog open={open.add} onClose={()=>setOpen({...open, add:false})}>
-                <div className="w3-padding-large" style={{width:"400px"}}>
+                <div className="p-3" style={{width:"400px"}}>
                     <CloseHeading label="Add Staff" onClose={()=>setOpen({...open, add:false})}/>
                     <form onSubmit={saveStaff}>
-                        <TextField label="Category" select fullWidth size="small" name="category" sx={{mt:2}}>
-                            {categories.map((row,index)=>(
-                                <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
-                            ))}
-                        </TextField>
                         <TextField label="Staff Name" fullWidth size="small" name="new_staff_name" sx={{mt:2}} />
                         <TextField label="Email" fullWidth size="small" name="email" sx={{mt:2}} />
-                        <TextField label="Phone" fullWidth size="small" name="phone" sx={{mt:2}} />
-                        <TextField label="National ID" fullWidth size="small" name="national_id" sx={{mt:2}} />
-                        <TextField label="Employment No." fullWidth size="small" name="emp_no" sx={{mt:2}} />
-                        <TextField label="Emergency Contact" fullWidth size="small" multiline rows={3} name="emergency" sx={{mt:2,mb:3}} />
-
+                        <TextField label="Phone" fullWidth size="small" name="phone" sx={{mt:2,mb:3}} />
+                        
                         <Button variant="contained" type="submit">Submit</Button>
                     </form>
                     <BottomClose onClose={()=>setOpen({...open, add:false})}/>
@@ -789,23 +746,10 @@ function AvailableStaff(){
             </Dialog>
 
             <Drawer anchor="right" open={open.edit} onClose={()=>setOpen({...open, edit:false})}>
-                <div className="w3-padding-large" style={{width:"320px"}}>
+                <div className="p-3" style={{width:"320px"}}>
                     <CloseHeading label="Edit Staff" onClose={()=>setOpen({...open, edit:false})}/>
                     <form onSubmit={editStaff}>
                         <input type="hidden" name="edit_staff_id" value={active.id} />
-                        <TextField 
-                            label="Category" 
-                            select 
-                            value={active.category} 
-                            onChange={e=>setActive({...active, category:e.target.value})} 
-                            fullWidth 
-                            size="small" 
-                            name="category" 
-                            sx={{mt:2}}>
-                            {categories.map((row,index)=>(
-                                <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
-                            ))}
-                        </TextField>
                         <TextField 
                             label="Staff Name" 
                             fullWidth 
@@ -882,97 +826,23 @@ function AvailableStaff(){
     )
 }
 
-function StaffCategories(){
+function Students(){
     const [rows,setRows] = useState([]);
-    const [open,setOpen] = useState({
-        add:false,
-        edit:false
-    });
-
-    const getRows = () => {
-        $.get("api/", {getStaffCategories:"true"}, res=>setRows(res));
-    }
-
-    const saveCategory = (event) => {
-        event.preventDefault();
-
-        $.post("api/", $(event.target).serialize(), res=>{
-            if(res.status){
-                Toast("Success");
-                getRows();
-                setOpen({...open, add:false});
-            }
-        })
-    }
-
-    useEffect(()=>{
-        getRows();
-    }, []);
-
-    return (
-        <>
-            <Box sx={{p:2}}>
-                <Button variant="contained" sx={{textTransform:"none"}} onClick={e=>setOpen({...open, add:true})}>Add Category</Button>
-            </Box>
-            <Paper sx={{m:2}}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>#</TableCell>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Description</TableCell>
-                            <TableCell>Action</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {rows.map((row,index)=>(
-                            <TableRow>
-                                <TableCell padding="none" sx={{pl:2}}>{index+1}</TableCell>
-                                <TableCell padding="none">{row.name}</TableCell>
-                                <TableCell padding="none">{row.description}</TableCell>
-                                <TableCell sx={{padding:"7px"}}>
-                                    <Button variant="contained" size="small">Edit</Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </Paper>
-
-            <Dialog open={open.add} onClose={()=>setOpen({...open, add:false})}>
-                <div className="w3-padding-large" style={{width:"400px"}}>
-                    <CloseHeading label="Add Staff Category" onClose={()=>setOpen({...open, add:false})}/>
-                    <form onSubmit={saveCategory}>
-                        <TextField label="Category Name" fullWidth size="small" name="new_staff_category" sx={{mt:2}} />
-                        <TextField label="Description" fullWidth size="small" multiline rows={3} name="description" sx={{mt:2,mb:3}} />
-
-                        <Button variant="contained" type="submit">Submit</Button>
-                    </form>
-                    <BottomClose onClose={()=>setOpen({...open, add:false})}/>
-                </div>
-            </Dialog>
-        </>
-    )
-}
-
-function StaffPermissions(){
-    const [rows,setRows] = useState([]);
+    const [permissions,setPermissions] = useState([]);
     const [active,setActive] = useState({});
     const [open,setOpen] = useState({
         add:false,
         edit:false
     });
+    const [selectedPermissions, setSelectedPermissions] = useState([]);
 
-    const getRows = () => {
-        $.get("api/", {getStaffPermissions:"true"}, res=>setRows(res));
-    }
-
-    const saveCategory = (event) => {
+    const saveStaff = (event) => {
         event.preventDefault();
 
         $.post("api/", $(event.target).serialize(), response=>{
             try{
                 let res = JSON.parse(response);
+
                 if(res.status){
                     Toast("Success");
                     getRows();
@@ -988,12 +858,13 @@ function StaffPermissions(){
         })
     }
 
-    const editPermission = (event) => {
+    const editStaff = (event) => {
         event.preventDefault();
 
         $.post("api/", $(event.target).serialize(), response=>{
             try{
                 let res = JSON.parse(response);
+
                 if(res.status){
                     Toast("Success");
                     getRows();
@@ -1009,25 +880,26 @@ function StaffPermissions(){
         })
     }
 
+    const getRows = () => {
+        $.get("api/", {getStudents:"true"}, res=>setRows(res));
+    }
+
     useEffect(()=>{
         getRows();
     }, []);
 
     return (
         <>
-            <Box sx={{p:2}}>
-                <Button variant="contained" sx={{textTransform:"none"}} onClick={e=>setOpen({...open, add:true})}>Add Permission</Button>
-            </Box>
-            <Paper sx={{m:2}}>
+            <Box sx={{m:2}}>
                 <Table>
                     <TableHead>
                         <TableRow>
                             <TableCell>#</TableCell>
                             <TableCell>Name</TableCell>
-                            <TableCell>Icon</TableCell>
-                            <TableCell>File</TableCell>
-                            <TableCell>Is Available</TableCell>
-                            
+                            <TableCell>Email</TableCell>
+                            <TableCell>Phone</TableCell>
+                            <TableCell>Picture</TableCell>
+                            <TableCell>Status</TableCell>
                             <TableCell>Action</TableCell>
                         </TableRow>
                     </TableHead>
@@ -1036,322 +908,49 @@ function StaffPermissions(){
                             <TableRow>
                                 <TableCell padding="none" sx={{pl:2}}>{index+1}</TableCell>
                                 <TableCell padding="none">{row.name}</TableCell>
-                                <TableCell padding="none">{row.icon}</TableCell>
-                                <TableCell padding="none">{row.file}</TableCell>
-                                <TableCell padding="none">{row.fileExists ? "Yes":"No"}</TableCell>
+                                <TableCell padding="none">{row.email}</TableCell>
+                                <TableCell padding="none">{row.phone}</TableCell>
+                                <TableCell padding="none">{row.picture}</TableCell>
+                                <TableCell padding="none">{row.status}</TableCell>
                                 <TableCell sx={{padding:"7px"}}>
-                                    <Button variant="contained" onClick={e=>{
+                                    <Button variant="contained" size="small" onClick={e=>{
                                         setActive(row);
-                                        setOpen({...open, edit:true})
-                                    }} size="small">Edit</Button>
+                                        setOpen({...open, edit:true});
+                                    }}>Edit</Button>
                                 </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
-            </Paper>
-
-            <Dialog open={open.add} onClose={()=>setOpen({...open, add:false})}>
-                <div className="w3-padding-large" style={{width:"400px"}}>
-                    <CloseHeading label="Add Staff Permission" onClose={()=>setOpen({...open, add:false})}/>
-                    <form onSubmit={saveCategory}>
-                        <TextField label="Permission Name" fullWidth size="small" name="new_staff_permission" sx={{mt:2}} />
-                        <TextField label="Icon" fullWidth size="small" name="icon" sx={{mt:2}} />
-                        <TextField label="File name" fullWidth size="small" multiline rows={3} name="file" sx={{mt:2,mb:3}} />
-
-                        <Button variant="contained" type="submit">Submit</Button>
-                    </form>
-                    <BottomClose onClose={()=>setOpen({...open, add:false})}/>
-                </div>
-            </Dialog>
-
-            <Drawer anchor="right" open={open.edit} onClose={()=>setOpen({...open, edit:false})}>
-                <div className="w3-padding-large" style={{width:"320px"}}>
-                    <CloseHeading label="Edit Staff Permission" onClose={()=>setOpen({...open, edit:false})}/>
-                    <form onSubmit={editPermission}>
-                        <input type="hidden" name="permission_id" value={active.id} />
-                        <TextField 
-                            label="Permission Name" 
-                            fullWidth 
-                            size="small" 
-                            name="edit_staff_permission" 
-                            value={active.name}
-                            onChange={e=>setActive({...active, name:e.target.value})}
-                            sx={{mt:2}} />
-                        <TextField 
-                            label="Icon" 
-                            fullWidth 
-                            size="small" 
-                            name="icon" 
-                            value={active.icon}
-                            onChange={e=>setActive({...active, icon:e.target.value})}
-                            sx={{mt:2}} />
-                        <TextField 
-                            label="File name" 
-                            fullWidth 
-                            size="small" 
-                            multiline 
-                            rows={3} 
-                            name="file" 
-                            value={active.file}
-                            onChange={e=>setActive({...active, file:e.target.value})}
-                            sx={{mt:2,mb:3}} />
-
-                        <Button variant="contained" type="submit">Submit</Button>
-                    </form>
-                    <BottomClose onClose={()=>setOpen({...open, edit:false})}/>
-                </div>
-            </Drawer>
+            </Box>
         </>
     )
 }
 
-function Countries(){
-    const [rows,setRows] = useState([]);
-    const [open,setOpen] = useState({
-        add:false,
-        edit:false,
-        taxes:false
-    });
-    const [search,setSearch] = useState("");
-    const [page, setPage] = React.useState(0);
-    const [rowsPerPage, setRowsPerPage] = React.useState(10);
-    
-    const [active,setActive] = useState({})
-    
-    const handleChangePage = (event, newPage) => {
-        setPage(newPage);
+function ControlPanel(){
+    const [value, setValue] = React.useState(0);
+    const handleChange = (event, newValue) => {
+        setValue(newValue);
     };
-    
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
-
-    const getRows = () => {
-        $.get("api/", {getCountries:"true"}, res=>setRows(res));
-    }
-
-    const saveCategory = (event) => {
-        event.preventDefault();
-
-        $.post("api/", $(event.target).serialize(), res=>{
-            if(res.status){
-                Toast("Success");
-                getRows();
-                setOpen({...open, add:false});
-            }
-        })
-    }
-
-    const edit = (event) => {
-        event.preventDefault();
-
-        $.post("api/", $(event.target).serialize(), response=>{
-            try{
-                let res = JSON.parse(response);
-                if(res.status){
-                    Toast("Success");
-                    getRows();
-                    setOpen({...open, edit:false});
-                }
-            }
-            catch(E){
-                alert(E.toString()+response);
-            }
-        })
-    }
-
-    useEffect(()=>{
-        getRows();
-    }, []);
 
     return (
         <>
-            {open.taxes ? <div className="p-2">
-                <Box sx={{py:2}}>
-                    <Button variant="outlined" color="error" onClick={e=>setOpen({...open, taxes:false})}>Close</Button>
+            <div>
+                <Box sx={{ width: '100%', typography: 'body1' }}>
+                    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                        <Tabs value={value} onChange={handleChange} aria-label="lab API tabs example">
+                            <Tab label="Subjects" {...a11yProps(0)} style={{textTransform:"none"}} />
+                            <Tab label="History" {...a11yProps(1)} style={{textTransform:"none"}} />
+                        </Tabs>
+                    </Box>
+                    <TabPanel value={value} index={0}>
+                        <Subjects/>
+                    </TabPanel>
+                    <TabPanel value={value} index={1}>
+                        <p>We dont know</p>
+                    </TabPanel>
                 </Box>
-                <ManageTaxes data={active}/>
-            </div>:
-            <>
-                <Box sx={{p:2}}>
-                    <Button variant="contained" sx={{textTransform:"none"}} onClick={e=>setOpen({...open, add:true})}>Add Country</Button>
-                </Box>
-                <Paper sx={{m:2}}>
-                    <Input sx={{m:2}} placeholder="Seach table" value={search} onChange={e=>setSearch(e.target.value)}/>
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>#</TableCell>
-                                <TableCell>Name</TableCell>
-                                <TableCell>Description</TableCell>
-                                <TableCell>Currency</TableCell>
-                                <TableCell>Currency Code</TableCell>
-                                <TableCell>Rating</TableCell>
-                                <TableCell>Action</TableCell>
-                                <TableCell>Taxes</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {rows
-                            .filter(r=>r.printable_name.toLowerCase().indexOf(search.toLowerCase()) != -1)
-                            .slice(page*rowsPerPage, (page+1)*rowsPerPage)
-                            .map((row,index)=>(
-                                <TableRow hover key={row.id} sx={{background:(index % 2 == 0 ? "rgba(0, 0, 0, 0.04)":"#fff")}}>
-                                    <TableCell padding="none" sx={{pl:2}}>{index+1}</TableCell>
-                                    <TableCell padding="none">{row.name}</TableCell>
-                                    <TableCell padding="none">{row.printable_name}</TableCell>
-                                    <TableCell padding="none">{row.currency}</TableCell>
-                                    <TableCell padding="none">{row.currency_code}</TableCell>
-                                    <TableCell padding="none">{row.rating}</TableCell>
-                                    <TableCell sx={{padding:"6px"}}>
-                                        <Button variant="outlined" size="small" sx={styles.smallBtn} onClick={e=>{
-                                            setActive(row);
-                                            setOpen({...open, edit:true});
-                                        }}>Edit</Button>
-                                    </TableCell>
-                                    <TableCell sx={{padding:"6px"}}>
-                                        <Button variant="outlined" size="small" sx={styles.smallBtn} onClick={e=>{
-                                            setActive(row);
-                                            setOpen({...open, taxes:true});
-                                        }}>Manage</Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                    <TablePagination
-                        rowsPerPageOptions={[5, 10, 25, 50, 100,200,500]}
-                        component="div"
-                        count={rows.length}
-                        rowsPerPage={rowsPerPage}
-                        page={page}
-                        onPageChange={handleChangePage}
-                        onRowsPerPageChange={handleChangeRowsPerPage}
-                        />
-                </Paper>
-            </>}
-
-            <Dialog open={open.add} onClose={()=>setOpen({...open, add:false})}>
-                <div className="w3-padding-large" style={{width:"400px"}}>
-                    <CloseHeading label="Add Country" onClose={()=>setOpen({...open, add:false})}/>
-                    <form onSubmit={saveCategory}>
-                        <TextField label="Category Name" fullWidth size="small" name="new_staff_category" sx={{mt:2}} />
-                        <TextField label="Description" fullWidth size="small" multiline rows={3} name="description" sx={{mt:2,mb:3}} />
-
-                        <Button variant="contained" type="submit">Submit</Button>
-                    </form>
-                    <BottomClose onClose={()=>setOpen({...open, add:false})}/>
-                </div>
-            </Dialog>
-
-            <Drawer anchor="right" open={open.edit} onClose={()=>setOpen({...open, edit:false})}>
-                <div className="w3-padding-large" style={{width:"400px"}}>
-                    <CloseHeading label="Edit Country" onClose={()=>setOpen({...open, edit:false})}/>
-                    <form onSubmit={edit}>
-                        <input type="hidden" name="country_id" value={active.id} />
-                        <TextField label="Country Name" fullWidth size="small" name="edit_country" value={active.name} onChange={e=>setActive({...active, name:e.target.value})} sx={{mt:2}} />
-                        <TextField label="Currency" fullWidth size="small" name="currency" value={active.currency} onChange={e=>setActive({...active, currency:e.target.value})} sx={{mt:2}} />
-                        <TextField label="Rating" fullWidth size="small" name="rating" value={active.rating} onChange={e=>setActive({...active, rating:e.target.value})} sx={{mt:2}} />
-                        <TextField label="Currency Code" fullWidth size="small" value={active.currency_code} onChange={e=>setActive({...active, currency_code:e.target.value})} name="currency_code" sx={{mt:2,mb:3}} />
-
-                        <Button variant="contained" type="submit">Submit</Button>
-                    </form>
-                    <BottomClose onClose={()=>setOpen({...open, edit:false})}/>
-                </div>
-            </Drawer>
-        </>
-    )
-}
-
-function ManageTaxes(props){
-    const [open,setOpen] = useState({
-        add:false
-    });
-    const [rows,setRows] = useState([]);
-
-    const getRows = () => {
-        $.get("api/", {getCountryTaxes:props.data.id}, res=>setRows(res));
-    }
-
-    const save = (event) => {
-        event.preventDefault();
-
-        $.post("api/", $(event.target).serialize(), response=>{
-            try{
-                let res = JSON.parse(response);
-                if(res.status){
-                    Toast("Success");
-                    getRows();
-                    setOpen({...open, add:false});
-                }
-                else{
-                    Toast(res.message);
-                }
-            }
-            catch(E){
-                alert(E.toString()+response);
-            }
-        })
-    }
-
-    useEffect(()=>{
-        getRows();
-    }, [props.data]);
-
-    return (
-        <>
-            <Alert severity="info" sx={{mb:2}}>Country: {props.data.name}</Alert>
-
-            <Button onClick={e=>setOpen({...open, add:true})}>Add Tax</Button>
-
-            <Paper sx={{mt:2}}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>#</TableCell>
-                            <TableCell>Name</TableCell>
-                            <TableCell>Percent</TableCell>
-                            <TableCell>Country</TableCell>
-                            <TableCell>Edit</TableCell>
-                            <TableCell>Delete</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {rows.map((row,index)=>(
-                            <TableRow>
-                                <TableCell>{index+1}</TableCell>
-                                <TableCell>{row.name}</TableCell>
-                                <TableCell>{row.percent}</TableCell>
-                                <TableCell>{props.data.name}</TableCell>
-                                <TableCell>
-                                    <Button variant="outlined" sx={styles.smallBtn}>Edit</Button>
-                                </TableCell>
-                                <TableCell>
-                                    <Button variant="outlined" color="error" sx={styles.smallBtn}>Edit</Button>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </Paper>
-
-            <Dialog open={open.add} onClose={()=>setOpen({...open, add:false})}>
-                <div className="py-2 px-4" style={{width:"400px"}}>
-                    <CloseHeading label="Add Tax" onClose={()=>setOpen({...open, add:false})} />
-
-                    <form onSubmit={save}>
-                        <TextField fullWidth label="Tax Name" name="tax_name" size="small" sx={{mt:2}} />
-                        <TextField fullWidth label="Percent" name="percent" size="small" sx={{mt:2,mb:3}} />
-                        <input type="hidden" name="country" value={props.data.id}/>
-
-                        <Button variant="contained" type="submit">Submit</Button>
-                    </form>
-
-                    <BottomClose onClose={()=>setOpen({...open, add:false})} />
-                </div>
-            </Dialog>
+            </div>
         </>
     )
 }
@@ -1456,40 +1055,40 @@ function Packages(){
             <Box sx={{p:2}}>
                 <Button variant="contained" sx={{textTransform:"none"}} onClick={e=>setOpen({...open, add:true})}>Add Package</Button>
             </Box>
-            <Paper sx={{m:2}}>
+            <Box sx={{m:2,width:600}}>
                 <Input sx={{m:2}} placeholder="Seach table" value={search} onChange={e=>setSearch(e.target.value)}/>
-                <table className="w3-table w3-table-all">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Name</th>
-                            <th>Price</th>
-                            <th>Duration(mo)</th>
-                            <th>Subsrictions</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>#</TableCell>
+                            <TableCell>Name</TableCell>
+                            <TableCell>Price</TableCell>
+                            <TableCell>Duration(mo)</TableCell>
+                            <TableCell>Subsrictions</TableCell>
+                            <TableCell>Action</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
                         {rows
                         .filter(r=>r.name.toLowerCase().indexOf(search.toLowerCase()) != -1)
                         .slice(page*rowsPerPage, (page+1)*rowsPerPage)
                         .map((row,index)=>(
-                            <tr hover key={row.id} sx={{background:(index % 2 == 0 ? "rgba(0, 0, 0, 0.04)":"#fff")}}>
-                                <td>{index+1}</td>
-                                <td>{row.name}</td>
-                                <td>{row.price}</td>
-                                <td>{row.duration}</td>
-                                <td>{row.subscriptions}</td>
-                                <td>
-                                    <Button variant="outlined" size="small" sx={styles.smallBtn} onClick={e=>{
+                            <TableRow hover key={row.id} sx={{background:(index % 2 == 0 ? "rgba(0, 0, 0, 0.04)":"#fff")}}>
+                                <TableCell padding="none" sx={{pl:2}}>{index+1}</TableCell>
+                                <TableCell padding="none">{row.name}</TableCell>
+                                <TableCell padding="none">{row.price}</TableCell>
+                                <TableCell padding="none">{row.duration}</TableCell>
+                                <TableCell padding="none">{row.subscriptions}</TableCell>
+                                <TableCell sx={{p:1}}>
+                                    <Link href="#" onClick={e=>{
                                         setActive(row);
                                         setOpen({...open, edit:true});
-                                    }}>Edit</Button>
-                                </td>
-                            </tr>
+                                    }}>Edit</Link>
+                                </TableCell>
+                            </TableRow>
                         ))}
-                    </tbody>
-                </table>
+                    </TableBody>
+                </Table>
                 <TablePagination
                     rowsPerPageOptions={[5, 10, 25, 50, 100,200,500]}
                     component="div"
@@ -1499,7 +1098,7 @@ function Packages(){
                     onPageChange={handleChangePage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
                     />
-            </Paper>
+            </Box>
 
             <Dialog open={open.add} onClose={()=>setOpen({...open, add:false})}>
                 <div className="w3-padding-large" style={{width:"400px"}}>
@@ -1847,6 +1446,86 @@ function Settings(){
                     </form>
                 </div>
             </div>
+        </>
+    )
+}
+
+function Subjects(){
+    const [rows,setRows] = useState([]);
+    const [open,setOpen] = useState({
+        add:false,
+        edit:false
+    });
+
+    const getRows = () => {
+        $.get("api/", {getSubjects:"true"}, res=>setRows(res));
+    }
+
+    const save = (event) => {
+        event.preventDefault();
+
+        $.post("api/", $(event.target).serialize(), response=>{
+            try{
+                let res = JSON.parse(response);
+                
+                if(res.status){
+                    Toast("Success");
+                    getRows();
+                    setOpen({...open, add:false});
+                }
+                else{
+                    Toast(res.message);
+                }
+            }
+            catch(E){
+                alert(E.toString()+response)
+            }
+        })
+    }
+
+    useEffect(()=>{
+        getRows();
+    }, []);
+
+    return (
+        <>
+            <Box sx={{p:2}}>
+                <Button variant="contained" sx={{textTransform:"none"}} onClick={e=>setOpen({...open, add:true})}>Add Subject</Button>
+            </Box>
+            <Box sx={{m:2,width:350}}>
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>#</TableCell>
+                            <TableCell>Name</TableCell>
+                            <TableCell>Action</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {rows.map((row,index)=>(
+                            <TableRow hover key={row.id} sx={{background:(index % 2 == 0 ? "rgba(0, 0, 0, 0.04)":"#fff")}}>
+                                <TableCell padding="none" sx={{pl:2}}>{index+1}</TableCell>
+                                <TableCell padding="none">{row.name}</TableCell>
+                                <TableCell sx={{padding:"7px"}}>
+                                    <Link href="#">Edit</Link>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </Box>
+
+            <Dialog open={open.add} onClose={()=>setOpen({...open, add:false})}>
+                <div className="w3-padding-large" style={{width:"340px"}}>
+                    <CloseHeading label="Add New Subject" onClose={()=>setOpen({...open, add:false})}/>
+                    <form onSubmit={save}>
+                        <TextField label="Subject Name" fullWidth size="small" name="new_subject" sx={{mt:2,mb:3}} />
+                        
+                        <Button variant="contained" type="submit">Submit</Button>
+                    </form>
+                    <BottomClose onClose={()=>setOpen({...open, add:false})}/>
+                </div>
+            </Dialog>
         </>
     )
 }

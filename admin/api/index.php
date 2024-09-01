@@ -71,6 +71,59 @@ elseif (isset($_GET['getCountries'])) {
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($data);
 }
+elseif (isset($_GET['getStaff'])) {
+	$data = [];
+
+	$read = $db->query("SELECT * FROM staff ");
+	while($row = $read->fetch_assoc()){
+		array_push($data, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($data);
+}
+elseif (isset($_GET['getStudents'])) {
+	$data = [];
+
+	$read = $db->query("SELECT * FROM students ");
+	while($row = $read->fetch_assoc()){
+		array_push($data, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($data);
+}
+elseif (isset($_GET['getSubjects'])) {
+	$data = [];
+
+	$read = $db->query("SELECT * FROM subjects ");
+	while($row = $read->fetch_assoc()){
+		array_push($data, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($data);
+}
+elseif (isset($_POST['new_subject'])) {
+	db_insert("subjects", [
+		'name' => $_POST['new_subject']
+	]);
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
+}
+elseif(isset($_POST['new_staff_name'], $_POST['email'], $_POST['phone'])){
+	//
+	db_insert("staff", [
+		'name' => $_POST['new_staff_name'],
+		'email' => $_POST['email'],
+		'password' => md5('1234'),
+		'status' => 'active',
+		'phone' => $_POST['phone'],
+		'picture' => 'avatar.png',
+	]);
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
+}
 elseif (isset($_GET['getSettings2'])) {
 	$data = [];
 
