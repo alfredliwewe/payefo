@@ -2,11 +2,15 @@ const {TextField,Button,Alert,ListItem,ListItemButton,ListItemIcon,ListItemText,
     TableHead,ThemeProvider,createTheme,Radio,Divider,
     TableRow,Tabs, Tab,Box,Chip,Typography, FormLabel,Rating,DialogTitle,DialogActions,DialogContent,DialogContentText,
     TableCell,TablePagination,Drawer,Link,MenuItem,Dialog,Input,
-    TableBody,Fab
+    TableBody,Fab, Card,
+    CardHeader,Avatar,
+    CardContent
 } = MaterialUI;
 const {useState,useEffect,useContext,createContext} = React;
 
 const Context = createContext({});
+
+const { red } = MaterialUI.colors;
 
 var format = new Intl.NumberFormat();
 
@@ -79,6 +83,18 @@ const styles = {
     }
 }
 
+const useStorage = (key, initialState) => {
+    const [value, setValue] = React.useState(
+        localStorage.getItem(key) != null ? JSON.parse(localStorage.getItem(key)) : initialState
+    );
+
+    React.useEffect(() => {
+        localStorage.setItem(key, JSON.stringify(value));
+    }, [value, key]);
+
+    return [value, setValue];
+};
+
 window.onload = function(){
     ReactDOM.render(<ThemeProvider theme={theme}><Index /></ThemeProvider>, document.getElementById("root"));
 }
@@ -144,13 +160,9 @@ function Index(){
                     {page == "Home" ? <Home />:
                     page == "Resources" ? <Resources />:
                     page == "View" ? <View />:
-                    page == "Programmes" ? <Programmes />:
-                    page == "Staff" ? <Staff />:
-                    page == "Languages" ? <Languages />:
-                    page == "Packages" ? <MainPackages />:
-                    page == "Emails" ? <Emails />:
+                    page == "Lessons" ? <Lessons />:
+                    page == "Lesson" ? <Lesson />:
                     page == "System Values" ? <Settings />:
-                    page == "Business" ? <Businesses />:
                     <>{page}</>}
                 </div>
             </div>
@@ -854,4 +866,322 @@ function post(url, formdata, callback){
     //ajax.addEventListener("abort", abortHandler, false);
     ajax.open("POST", url);
     ajax.send(formdata);
+}
+
+function Lessons(){
+    const [value, setValue] = React.useState(0);
+
+    const handleChange = (event, newValue) => {
+        setValue(newValue);
+    };
+
+    return (
+        <>
+            <Box sx={{ width: '100%' }}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                    <Tabs value={value} onChange={handleChange} aria-label="basic tabs example" sx={{minHeight:"unset"}}>
+                        <Tab label="Create" {...a11yProps(0)} sx={{minHeight:"unset"}}/>
+                        <Tab label="Available"{...a11yProps(1)} sx={{minHeight:"unset"}} />
+                    </Tabs>
+                </Box>
+                <TabPanel value={value} index={0}>
+                    <CreateLesson onSuccess={()=>setValue(1)} />
+                </TabPanel>
+                <TabPanel value={value} index={1}>
+                    <AvailableLessons />
+                </TabPanel>
+            </Box>
+        </>
+    )
+}
+
+function CreateLesson(props){
+    const [subjects,setSubjects] = useState([]);
+    const [attachments,setAttachments] = useState([]);
+    const [files,setFiles] = useState([]);
+
+    const saveLesson = (event) => {
+        event.preventDefault();
+
+        let formdata = new FormData(event.target);
+
+        files.map((row,index)=>{
+            formdata.append("attachment"+(index), files[index]);
+        })
+        formdata.append("attachments", files.length);
+
+        post("api/", formdata, response=>{
+            try{
+                let res = JSON.parse(response);
+                if(res.status){
+                    Toast("Success")
+                    props.onSuccess();
+                }
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
+
+    const fileExtension = (filename) => {
+        let chars = filename.split(".")
+        return chars[chars.length-1].toLowerCase();;
+    }
+
+    const fileType = (filename) => {
+        let ext = fileExtension(filename);
+
+        if(["png","jpg","jpeg","webp","gif"].includes(ext)){
+            return "img";
+        }
+        else{
+            return ext;
+        }
+    }
+
+    const chooseFiles = () => {
+        let input = document.createElement("input");
+        input.type = 'file';
+        input.multiple = 'multiple'
+        input.addEventListener('change', function(e){
+            let files = [], pure_files = [];
+            for (let i = 0; i<input.files.length; i++){
+                let file = input.files[i];
+                pure_files.push(file);
+
+                file.src = URL.createObjectURL(file);
+                file.typeFile = fileType(input.name)
+                files.push(file)
+            }
+
+            setAttachments(files);
+            setFiles(pure_files);
+        });
+
+        input.click();
+    }
+
+    const getSubjects = () => {
+        $.get("api/", {getSubjects:"true"}, res=>setSubjects(res));
+    }
+
+    useEffect(()=>{
+        getSubjects()
+    }, []);
+
+    return (
+        <>
+            <div className="w3-row">
+                <div className="w3-col m3">&nbsp;</div>
+                <div className="w3-col m6">
+                    <h2>Create a Lesson</h2>
+
+                    <form onSubmit={saveLesson}>
+                        <TextField label="Subject" size="small" fullWidth  name={"subject"} sx={{mt:2}} select>
+                            {subjects.map((row,index)=>(
+                                <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
+                            ))}
+                        </TextField>
+
+                        <TextField label={"Form"} fullWidth size="small" name={"form"} defaultValue={"notes"} sx={{mt:2}} select>
+                            {[1,2,3,4].map((row,index)=>(
+                                <MenuItem value={row} key={row}>{row}</MenuItem>
+                            ))}
+                        </TextField>
+
+                        <TextField label={"Title"} fullWidth size="small" name={"new_lesson_title"} sx={{mt:2}} />
+                        <TextField label={"Description"} fullWidth size="small" name={"description"} sx={{my:2}} multiline rows={4} />
+
+                        <Button variant="outlined" onClick={chooseFiles}><i className="fa fa-paperclip mr-2"/> Attach files</Button>
+                        <Box sx={{my:2}}>
+                            {attachments.map((row,index)=>(
+                                <>{row.typeFile == "img" ? <>
+                                    <img src={row.src} width={"100%"} className="rounded"/>
+                                </>:
+                                <>
+                                    <video width={"100%"} controls>
+                                        <source src={row.src} type="video/mp4"/>
+                                    </video>
+                                </>}</>
+                            ))}
+                        </Box>
+                        <Button variant="contained" type="submit">Submit Lesson</Button>
+                    </form>
+                </div>
+            </div>
+        </>
+    )
+}
+
+function AvailableLessons(){
+    const [subjects,setSubjects] = useState([]);
+    const [books,setBooks] = useState([]);
+    const [rows,setRows] = useState([]);
+
+    const [form,setForm] = useStorage('school-form', {form:0,subject:0});
+
+    const getSubjects = () => {
+        $.get("api/", {getSubjects:"true"}, res=>setSubjects(res));
+    }
+
+    const getBooks = () => {
+        $.get("api/", {getBooks:"true"}, res=>setBooks(res));
+    }
+
+    const filterRecords = (event) => {
+        event.preventDefault();
+
+        $.post("api/", $(event.target).serialize(), response=>{
+            setRows(response);
+        })
+    }
+    
+    useEffect(()=>{
+        getSubjects();
+        getBooks();
+    }, []);
+
+    return (
+        <>
+            <div className="w3-row">
+                <div className="w3-col m2">&nbsp;</div>
+                <div className="w3-col m8 pt-4">
+                    <form onSubmit={filterRecords} className="py-2">
+                        <TextField 
+                            label="Subject" 
+                            sx={{width:180}} 
+                            size="small" 
+                            select 
+                            value={form.subject}
+                            onChange={e=>setForm({...form, subject:e.target.value})}
+                            name="subject_lessons">
+                            {subjects.map((row,index)=>(
+                                <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
+                            ))}
+                        </TextField>
+
+                        <TextField 
+                            label="Form" 
+                            sx={{width:180,mx:2}} 
+                            size="small" 
+                            select 
+                            value={form.form}
+                            onChange={e=>setForm({...form, form:e.target.value})}
+                            name="form">
+                            {[1,2,3,4].map((row,index)=>(
+                                <MenuItem value={row} key={row}>{row}</MenuItem>
+                            ))}
+                        </TextField>
+
+                        <Button variant="outlined" type="submit">Submit</Button>
+                    </form>
+
+                    <Divider/>
+
+                    {rows.map((row,index)=>(
+                        <LessonView data={row} key={row.id}/>
+                    ))}
+
+                    {rows.length == 0 && <Alert severity="error">No lessons available for this selection</Alert>}
+                </div>
+            </div>
+        </>
+    )
+}
+
+function LessonView(props){
+    const [data,setData] = useState(props.data);
+    const {page,setPage} = useContext(Context);
+
+    useEffect(()=>{
+        setData(props.data);
+    }, [props.data]);
+
+    return (
+        <>
+            <div className="p-2 mt-3">
+                <Card sx={{ width: '100%',borderRadius:"24px" }}>
+                    <CardHeader
+                        avatar={
+                            <Avatar sx={{ bgcolor: red[500] }} aria-label="recipe">R</Avatar>
+                        }
+                        action={
+                            <Fab size="small" sx={{boxShadow:"none"}}>
+                                <i className="far fa-bookmark text-lg"/>
+                            </Fab>
+                        }
+                        title={props.data.admin_data.name}
+                        subheader={"teacher - "+props.data.ago}
+                    />
+                    <CardContent>
+                        <Typography variant="h4">{props.data.title}</Typography>
+                        <p>{props.data.text}</p>
+
+                        <Box>
+                            <Button onClick={e=>{
+                                localStorage.setItem("lesson", JSON.stringify(data));
+                                setPage("Lesson")
+                            }}>Open</Button>
+
+                            <Button sx={{ml:1}} variant="text">Comments ({data.comments})</Button>
+                            <Button sx={{ml:1}} variant="text">Attended ({data.attended})</Button>
+                            <Button sx={{ml:1}} variant="text">Opened ({data.opened})</Button>
+                            <Button  sx={{ml:1}} variant="text">Save <i className="far fa-bookmark ml-2"/></Button>
+                        </Box>
+                    </CardContent>
+                </Card>
+            </div>
+        </>
+    )
+}
+
+function Lesson(){
+    const [data,setData] = useStorage('lesson', {id:0});
+    const {page,setPage} = useContext(Context);
+
+    useEffect(()=>{
+        if(data.id != 0){
+            $.post("api/", {saveOpened:data.id}, res=>{
+                //
+            })
+        }
+    }, []);
+
+    return (
+        <>
+            {data.id != 0 && <div className="p-2 mt-3">
+                <Card sx={{ width: '100%',borderRadius:"24px" }}>
+                    <CardHeader
+                        avatar={
+                            <Avatar sx={{ bgcolor: red[500] }} aria-label="recipe">R</Avatar>
+                        }
+                        action={
+                            <Fab size="small" sx={{boxShadow:"none"}}>
+                                <i className="far fa-bookmark text-lg"/>
+                            </Fab>
+                        }
+                        title={data.admin_data.name}
+                        subheader={"teacher - "+data.ago}
+                    />
+                    <CardContent>
+                        <Typography variant="h4">{data.title}</Typography>
+                        <p>{data.text}</p>
+
+                        <Box>
+                            <Button onClick={e=>{
+                                localStorage.setItem("lesson", data);
+                                setPage("Lesson")
+                            }}>Open</Button>
+
+                            <Button sx={{ml:1}} variant="text">Comments ({data.comments})</Button>
+                            <Button sx={{ml:1}} variant="text">Attended ({data.attended})</Button>
+                            <Button sx={{ml:1}} variant="text">Opened ({data.opened})</Button>
+                            <Button  sx={{ml:1}} variant="text">Save <i className="far fa-bookmark ml-2"/></Button>
+                        </Box>
+                    </CardContent>
+                </Card>
+            </div>}
+        </>
+    )
 }

@@ -2,11 +2,14 @@ const {TextField,Button,Alert,ListItem,ListItemButton,ListItemIcon,ListItemText,
     TableHead,Fab,Radio,Divider,Typography, createTheme, ThemeProvider,
     TableRow,Tabs, Tab,Box,Chip,
     TableCell,TablePagination,Drawer,Link,MenuItem,Dialog,Input,
-    TableBody
+    TableBody, Card,CardHeader,Avatar,IconButton,
+    InputBase,CardContent
 } = MaterialUI;
 const {useState,useEffect,useContext,createContext} = React;
 
 const Context = createContext({});
+
+const { red } = MaterialUI.colors;
 
 let theme = createTheme({
     palette: {
@@ -51,6 +54,18 @@ let theme = createTheme({
         },
     }
 });
+
+const useStorage = (key, initialState) => {
+    const [value, setValue] = React.useState(
+        localStorage.getItem(key) != null ? JSON.parse(localStorage.getItem(key)) : initialState
+    );
+
+    React.useEffect(() => {
+        localStorage.setItem(key, JSON.stringify(value));
+    }, [value, key]);
+
+    return [value, setValue];
+};
 
 var format = new Intl.NumberFormat();
 
@@ -105,7 +120,44 @@ function Index(){
             title:"Profile",
             icon:"fa fa-user"
         }
-    ]
+    ];
+
+    const getData = () => {
+        $.get("api/", {getSettings2:"true"}, res=>{
+            setSettings({...settings, ...res});
+        })
+    }
+
+    useEffect(()=>{
+        getData();
+    }, []);
+
+    useEffect(()=>{
+        /*getUser();
+
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                //Toast(permission);
+            }
+        });*/
+
+        // Handle the popstate event
+        const listener =  (event) => {
+            let chars = window.location.href.split("=");
+            setPage(chars[chars.length - 1]);
+            console.log('History state changed:', event.state);
+        }
+
+        window.addEventListener('popstate', listener);
+
+        return () => {
+            window.removeEventListener("popstate", listener);
+        }
+    }, []);
+
+    useEffect(()=>{
+        history.pushState({ someKey: 'someValue' }, 'New Page Title', './?page='+page);
+    }, [page]);
 
     return (
         <>
@@ -129,7 +181,8 @@ function Index(){
                         page == "Adverts" ? <Adverts />:
                         page == "Genres" ? <Genres />:
                         page == "System Values" ? <SystemValues />:
-                        page == "Music" ? <Music />:
+                        page == "Lessons" ? <AvailableLessons />:
+                        page == "Lesson" ? <Lesson />:
                         <>{page}</>}
                     </div>
                 </div>
@@ -137,7 +190,7 @@ function Index(){
                 <Drawer open={open} onClose={()=>setOpen(false)} anchor="left">
                     <div className="w3-padding w3-border-right w3-light-grey" style={{overflow:"auto",width:(0.7 * window.innerWidth)+"px",height:window.innerHeight+"px"}}>
                         <div className="w3-center pt-20 pb-20">
-                            <img src={"../images/logo.png"} width="40" />
+                            <img src={"../uploads/"+settings.logo} width="40" />
                         </div>
                         {menus.map((row,index)=>(
                             <ListItem size="small" key={row.title} onClick={e=>{
@@ -243,8 +296,8 @@ function Home(){
             <div className="w3-row">
                 <div className="w3-half p-2">
                     {subscriptions.map((row,index)=>(
-                        <Paper className="p-3">
-                            <div className="clearfix">
+                        <Paper sx={{p:3,borderRadius:"24px"}}>
+                            <div className="clearfix py-2">
                                 <font>{row.package_data.name}</font> | 
                                 <Typography variant="body2" color="text.secondary" sx={{px:3,display:"inline-block"}}>{row.package_data.duration} months</Typography> | 
                                 <span className="badge bg-red-100 p-2 ml-2">Expires: {row.expires}</span>
@@ -260,6 +313,57 @@ function Home(){
 
                 <div className="w3-half p-3">
                     <Button onClick={e=>setOpen({...open, pricing:true})}>Browse Packages</Button>
+                </div>
+            </div>
+
+            <div className="p-2">
+                <div className="w3-row">
+                    <div className="w3-col s6">
+                        <div className="p-1">
+                            <Paper sx={{p:3,borderRadius:"24px"}} onClick={e=>setPage("Resources")}>
+                                <div className="w3-center">
+                                    <i className="fa fa-book-open-reader fa-2x"/>
+                                    <br/>
+                                    <font>Resources</font>
+                                </div>
+                            </Paper>
+                        </div>
+                    </div>
+                    <div className="w3-col s6">
+                        <div className="p-1">
+                            <Paper sx={{p:3,borderRadius:"24px"}} onClick={e=>setPage("Lessons")}>
+                                <div className="w3-center">
+                                    <i className="fa fa-list-ol fa-2x"/>
+                                    <br/>
+                                    <font>Lessons</font>
+                                </div>
+                            </Paper>
+                        </div>
+                    </div>
+                </div>
+                <div className="w3-row">
+                    <div className="w3-col s6">
+                        <div className="p-1">
+                            <Paper sx={{p:3,borderRadius:"24px"}}>
+                                <div className="w3-center">
+                                    <i className="far fa-note-sticky fa-2x"/>
+                                    <br/>
+                                    <font>Tests</font>
+                                </div>
+                            </Paper>
+                        </div>
+                    </div>
+                    <div className="w3-col s6">
+                        <div className="p-1">
+                            <Paper sx={{p:3,borderRadius:"24px"}}>
+                                <div className="w3-center">
+                                    <i className="fa fa-user fa-2x"/>
+                                    <br/>
+                                    <font>Profile</font>
+                                </div>
+                            </Paper>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -631,6 +735,319 @@ function View(){
                         window.open("../uploads/"+activeBook.file, "_blank").focus();
                     }}>Read Now</Button>
                 </div>
+            </div>
+        </>
+    )
+}
+
+function AvailableLessons(){
+    const [subjects,setSubjects] = useState([]);
+    const [books,setBooks] = useState([]);
+    const [rows,setRows] = useState([]);
+
+    const [form,setForm] = useStorage('school-form', {form:0,subject:0});
+
+    const getSubjects = () => {
+        $.get("api/", {getSubjects:"true"}, res=>setSubjects(res));
+    }
+
+    const getBooks = () => {
+        $.get("api/", {getBooks:"true"}, res=>setBooks(res));
+    }
+
+    const filterRecords = (event) => {
+        event.preventDefault();
+
+        $.post("api/", $(event.target).serialize(), response=>{
+            setRows(response);
+        })
+    }
+    
+    useEffect(()=>{
+        getSubjects();
+        getBooks();
+    }, []);
+
+    return (
+        <>
+            <div className="w3-row">
+                <div className="w3-col m8 pt-4">
+                    <form onSubmit={filterRecords} className="p-2">
+                        <TextField 
+                            label="Subject" 
+                            sx={{mt:2}}
+                            fullWidth 
+                            size="small" 
+                            select 
+                            value={form.subject}
+                            onChange={e=>setForm({...form, subject:e.target.value})}
+                            name="subject_lessons">
+                            {subjects.map((row,index)=>(
+                                <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
+                            ))}
+                        </TextField>
+
+                        <TextField 
+                            label="Form" 
+                            sx={{my:2}}
+                            fullWidth 
+                            size="small" 
+                            select 
+                            value={form.form}
+                            onChange={e=>setForm({...form, form:e.target.value})}
+                            name="form">
+                            {[1,2,3,4].map((row,index)=>(
+                                <MenuItem value={row} key={row}>{row}</MenuItem>
+                            ))}
+                        </TextField>
+
+                        <Button variant="outlined" type="submit">Submit</Button>
+                    </form>
+
+                    <Divider/>
+
+                    {rows.map((row,index)=>(
+                        <LessonView data={row} key={row.id}/>
+                    ))}
+
+                    {rows.length == 0 && <Alert severity="error">No lessons available for this selection</Alert>}
+                </div>
+            </div>
+        </>
+    )
+}
+
+function LessonView(props){
+    const [data,setData] = useState(props.data);
+    const {page,setPage} = useContext(Context);
+
+    useEffect(()=>{
+        setData(props.data);
+    }, [props.data]);
+
+    return (
+        <>
+            <div className="p-2 mt-3">
+                <Card sx={{ width: '100%',borderRadius:"24px" }}>
+                    <CardHeader
+                        avatar={
+                            <img width={40} style={{borderRadius:"50%"}} src={"../uploads/"+props.data.admin_data.picture} />
+                        }
+                        action={
+                            <Fab size="small" sx={{boxShadow:"none"}}>
+                                <i className="far fa-bookmark text-lg"/>
+                            </Fab>
+                        }
+                        title={props.data.admin_data.name}
+                        subheader={"teacher - "+props.data.ago}
+                    />
+                    <CardContent>
+                        <Typography variant="h4">{props.data.title}</Typography>
+                        <p>{props.data.text}</p>
+
+                        <Box>
+                            <Button onClick={e=>{
+                                localStorage.setItem("lesson", JSON.stringify(data));
+                                setPage("Lesson")
+                            }}>Open</Button>
+
+                            <Button sx={{ml:1}} variant="text">Comments ({data.comments})</Button>
+                            <Button sx={{ml:1}} variant="text">Attended ({data.attended})</Button>
+                            <Button sx={{ml:1}} variant="text">Opened ({data.opened})</Button>
+                            <Button  sx={{ml:1}} variant="text">Save <i className="far fa-bookmark ml-2"/></Button>
+                        </Box>
+                    </CardContent>
+                </Card>
+            </div>
+        </>
+    )
+}
+
+function Lesson(){
+    const [data,setData] = useStorage('lesson', {id:0});
+    const {page,setPage} = useContext(Context);
+    const [comments,setComments] = useState([]);
+    const [attachments,setAttachments] = useState([]);
+
+    const getComments = () => {
+        $.get("api/", {getComments:data.id}, res=>setComments(res));
+    }
+
+    const getAttachments = () => {
+        $.get("api/", {getAttachments:data.id,type:"lesson"}, res=>setAttachments(res));
+    }
+
+    const fileExtension = (filename) => {
+        let chars = filename.split(".")
+        return chars[chars.length-1].toLowerCase();;
+    }
+
+    const fileType = (filename) => {
+        let ext = fileExtension(filename);
+
+        if(["png","jpg","jpeg","webp","gif"].includes(ext)){
+            return "img";
+        }
+        else{
+            return ext;
+        }
+    }
+
+    useEffect(()=>{
+        if(data.id != 0){
+            $.post("api/", {saveOpened:data.id}, res=>{
+                //
+            });
+
+            getComments();
+            getAttachments();
+        }
+    }, []);
+
+    return (
+        <>
+            <div className="w3-row">
+                <div className="w3-col m1">&nbsp;</div>
+                <div className="w3-col m10">
+                    {data.id != 0 && <div className="p-2 mt-3">
+                        <Card sx={{ width: '100%',borderRadius:"24px" }}>
+                            <CardHeader
+                                avatar={
+                                    <img width={40} style={{borderRadius:"50%"}} src={"../uploads/"+data.admin_data.picture} />
+                                }
+                                action={
+                                    <Fab size="small" sx={{boxShadow:"none"}}>
+                                        <i className="far fa-bookmark text-lg"/>
+                                    </Fab>
+                                }
+                                title={data.admin_data.name}
+                                subheader={"teacher - "+data.ago}
+                            />
+                            <CardContent>
+                                <Typography variant="h4">{data.title}</Typography>
+                                <p>{data.text}</p>
+
+                                <div className="w3-responsive">
+                                    <div className="flex gap-1 my-2">
+                                        {attachments.map((row,index)=>(
+                                            <>{fileType(row.filename) == "img" ? <>
+                                                <img src={"../uploads/"+row.filename} height={"140"} className="rounded"/>
+                                            </>:
+                                            <>
+                                                <video height={"140"} controls>
+                                                    <source src={"../uploads/"+row.filename} className="rounded" type="video/mp4"/>
+                                                </video>
+                                            </>}</>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <Box sx={{mb:2}}>
+                                    <Button variant="outlined">Comments ({data.comments})</Button>
+                                    <Button sx={{ml:1}} variant="text">Attended ({data.attended})</Button>
+                                    <Button sx={{ml:1}} variant="text">Opened ({data.opened})</Button>
+                                    <Button  sx={{ml:1}} variant="text">Save <i className="far fa-bookmark ml-2"/></Button>
+                                </Box>
+                                <CommentBox data={data} onSuccess={()=>{
+                                    getComments();
+                                }} />
+
+                                {comments.length > 0 && <>
+                                    <Divider sx={{mt:2}}/>
+
+                                    {comments.map((row,index)=>(
+                                        <CommentView data={row} key={row.id}/>
+                                    ))}
+                                </>}
+                            </CardContent>
+                        </Card>
+                    </div>}
+                </div>
+            </div>
+        </>
+    )
+}
+
+function CommentBox(props) {
+    const saveComment = (event) => {
+        event.preventDefault();
+
+        let formdata = new FormData(event.target);
+
+        post("api/", formdata, response=>{
+            try{
+                let res = JSON.parse(response);
+                if(res.status){
+                    props.onSuccess();
+                    Toast("Success");
+                    event.target.form.reset();
+                }
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
+
+    return (
+        <>
+            <form onSubmit={saveComment}>
+                <input type="hidden" name="lesson_id" value={props.data.id} />
+                <Box
+                    component="div"
+                    sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%',border:"1px solid #ddd",borderRadius:"7px" }}>
+                    <IconButton sx={{ p: '7px',display:"none" }} size="small" aria-label="menu">
+                        <i className="fa fa-bars" />
+                    </IconButton>
+                    <InputBase
+                        multiline
+                        rows={2}
+                        sx={{ ml: 1, flex: 1 }}
+                        size="small"
+                        name="new_comment"
+                        placeholder="Write comment"
+                        required
+                        inputProps={{ 'aria-label': 'search google maps' }}
+                        />
+                    <IconButton type="button" size="small" sx={{ p: '7px' }} aria-label="search">
+                        <i className="fa fa-paperclip" />
+                    </IconButton>
+                    <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />
+                    <IconButton type="submit" color="primary" size="small" sx={{ p: '7px' }} aria-label="directions">
+                        <i className="fa fa-location-arrow" />
+                    </IconButton>
+                </Box>
+            </form>
+        </>
+    );
+}
+
+function CommentView(props){
+    const [data,setData] = useState(props);
+
+    return (
+        <>
+            <div className="mt-3">
+                <>
+                    <CardHeader
+                        avatar={
+                            <img width={40} style={{borderRadius:"50%"}} src={"../uploads/"+props.data.user_data.photo} />
+                        }
+                        action={
+                            <></>
+                        }
+                        title={props.data.user_data.name}
+                        subheader={props.data.user_type+" - "+props.data.ago}
+                    />
+                    <CardContent sx={{p:1}}>
+                        <p>{props.data.comment}</p>
+
+                        <Box>
+                            <Button variant="text">Replies ({data.comments})</Button>
+                            <Button sx={{ml:1}} variant="text">Like ({data.attended})</Button>
+                        </Box>
+                    </CardContent>
+                </>
             </div>
         </>
     )

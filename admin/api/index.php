@@ -119,7 +119,7 @@ elseif(isset($_POST['new_staff_name'], $_POST['email'], $_POST['phone'])){
 		'password' => md5('1234'),
 		'status' => 'active',
 		'phone' => $_POST['phone'],
-		'picture' => 'avatar.png',
+		'picture' => 'default_avatar.png',
 	]);
 
 	echo json_encode(['status' => true, 'message' => "Success"]);

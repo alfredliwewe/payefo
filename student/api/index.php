@@ -33,6 +33,22 @@ elseif (isset($_GET['getSubscriptions'])) {
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($rows);
 }
+
+elseif (isset($_GET['getAttachments'])) {
+	$id = (int)$_GET['getAttachments'];
+	$type = $db->real_escape_string($_GET['type']);
+
+	$rows = [];
+
+	$read = $db->query("SELECT * FROM attachments WHERE ref = '$id' AND type = '$type' ");
+	while ($row = $read->fetch_assoc()) {
+		array_push($rows, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
+}
+
 elseif (isset($_POST['addSubscription'], $_POST['id'])) {
 	$user_id = $_SESSION['student_id'];
 	$package_data = getData("packages", ['id' => $_POST['id']]);
@@ -80,6 +96,88 @@ elseif (isset($_GET['getUser'])) {
 
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($_SESSION['data']);
+}
+elseif(isset($_POST['subject_lessons'], $_POST['form'])){
+	$subject = (int)$_POST['subject_lessons'];
+	$form = (int)$_POST['form'];
+
+	$subjects = [];
+	$read = $db->query("SELECT * FROM subjects");
+	while ($row = $read->fetch_assoc()) {
+		$subjects[$row['id']] = $row;
+	}
+
+	$admins = [];
+	$read = $db->query("SELECT * FROM staff");
+	while ($row = $read->fetch_assoc()) {
+		$admins[$row['id']] = $row;
+	}
+
+	$rows = [];
+
+	$read = $db->query("SELECT * FROM lessons WHERE form = '$form' AND subject = '$subject' ORDER BY id DESC");
+	while ($row = $read->fetch_assoc()) {
+		$row['admin_data'] = $admins[$row['teacher']];
+		$row['subject_data'] = $subjects[$row['subject']];
+		$row['date'] = date('d-M-Y', $row['date_added']);
+		$row['ago'] = time_ago($row['date_added']);
+		$row['comments'] = (int)$db->query("SELECT COUNT(id) FROM comments WHERE ref = '{$row['id']}' ")->fetch_array()[0];
+		$row['opened'] = (int)$db->query("SELECT COUNT(id) FROM progress WHERE ref = '{$row['id']}' AND type = 'lesson' ")->fetch_array()[0];
+		$row['attended'] = $db->query("SELECT DISTINCT student FROM progress WHERE ref = '{$row['id']}' AND type = 'lesson' ")->num_rows;
+		array_push($rows, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
+}
+elseif (isset($_POST['saveOpened'])) {
+	db_insert("progress", [
+		'student' => $_SESSION['student_id'],
+		'ref' => $_POST['saveOpened'],
+		'type' => 'lesson',
+		'date_added' => $time,
+	]);
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
+}
+elseif (isset($_GET['getComments'])) {
+	$post = (int)$_GET['getComments'];
+
+	$rows = [];
+
+	$students = [];
+	$read = $db->query("SELECT * FROM students");
+	while ($row = $read->fetch_assoc()) {
+		$students[$row['id']] = $row;
+	}
+
+	$teachers = [];
+	$read = $db->query("SELECT * FROM staff");
+	while ($row = $read->fetch_assoc()) {
+		$teachers[$row['id']] = $row;
+	}
+
+	$read = $db->query("SELECT * FROM comments WHERE ref = '$post' ORDER BY id DESC ");
+	while ($row = $read->fetch_assoc()) {
+		$row['user_data'] = $row['user_type'] == 'student' ? $students[$row['user']] : $teachers[$row['user']];
+		$row['ago'] = time_ago($row['date_added']);
+		array_push($rows, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
+}
+elseif(isset($_POST['lesson_id'], $_POST['new_comment'])){
+	db_insert("comments", [
+		'user' => $_SESSION['student_id'],
+		'user_type' => 'student',
+		'comment' => $_POST['new_comment'],
+		'date_added' => $time,
+		'status' => 'active',
+		'ref' => $_POST['lesson_id'],
+	]);
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
 }
 elseif (isset($_GET['getBooks'])) {
 	$subjects = [];

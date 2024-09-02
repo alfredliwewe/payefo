@@ -6,7 +6,7 @@ require '../../functions.php';
 require '../../includes/String.php';
 $time = time();
 
-$student_id = $_SESSION['user_id'];
+$student_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : 1;
 
 if (isset($_GET['getSettings2'])) {
 	$data = [];
@@ -36,6 +36,39 @@ elseif (isset($_GET['getUser'])) {
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($_SESSION['data']);
 }
+elseif(isset($_POST['subject_lessons'], $_POST['form'])){
+	$subject = (int)$_POST['subject_lessons'];
+	$form = (int)$_POST['form'];
+
+	$subjects = [];
+	$read = $db->query("SELECT * FROM subjects");
+	while ($row = $read->fetch_assoc()) {
+		$subjects[$row['id']] = $row;
+	}
+
+	$admins = [];
+	$read = $db->query("SELECT * FROM staff");
+	while ($row = $read->fetch_assoc()) {
+		$admins[$row['id']] = $row;
+	}
+
+	$rows = [];
+
+	$read = $db->query("SELECT * FROM lessons WHERE form = '$form' AND subject = '$subject' ORDER BY id DESC");
+	while ($row = $read->fetch_assoc()) {
+		$row['admin_data'] = $admins[$row['teacher']];
+		$row['subject_data'] = $subjects[$row['subject']];
+		$row['date'] = date('d-M-Y', $row['date_added']);
+		$row['ago'] = time_ago($row['date_added']);
+		$row['comments'] = (int)$db->query("SELECT COUNT(id) FROM comments WHERE ref = '{$row['id']}' ")->fetch_array()[0];
+		$row['opened'] = (int)$db->query("SELECT COUNT(id) FROM progress WHERE ref = '{$row['id']}' AND type = 'lesson' ")->fetch_array()[0];
+		$row['attended'] = $db->query("SELECT DISTINCT student FROM progress WHERE ref = '{$row['id']}' AND type = 'lesson' ")->num_rows;
+		array_push($rows, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
+}
 elseif(isset($_POST['subject_resources'], $_POST['form'])){
 	$subject = (int)$_POST['subject_resources'];
 	$form = (int)$_POST['form'];
@@ -47,7 +80,7 @@ elseif(isset($_POST['subject_resources'], $_POST['form'])){
 	}
 
 	$admins = [];
-	$read = $db->query("SELECT * FROM admins");
+	$read = $db->query("SELECT * FROM staff");
 	while ($row = $read->fetch_assoc()) {
 		$admins[$row['id']] = $row;
 	}
@@ -102,6 +135,32 @@ elseif(isset($_POST['resource_id'], $_POST['subject'], $_POST['type'], $_POST['e
 		'title' => $_POST['edit_book_title'],
 		'author' => $_POST['author']
 	], ['id' => $_POST['resource_id']]);
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
+}
+elseif(isset($_POST['subject'], $_POST['form'], $_POST['new_lesson_title'], $_POST['description'])){
+	//
+	$lesson_id = db_insert("lessons", [
+		'teacher' => $_SESSION['user_id'],
+		'title' => $_POST['new_lesson_title'],
+		'text' => $_POST['description'],
+		'status' => "active",
+		'subject' => $_POST['subject'],
+		'form' => $_POST['form'],
+		'date_added' => $time,
+	]);
+
+	for ($i=0; $i < $_POST['attachments']; $i++) { 
+		$filename = $_FILES['attachment'.$i]['name'];
+
+		move_uploaded_file($_FILES['attachment'.$i]['tmp_name'], "../../uploads/".$filename);
+
+		db_insert("attachments", [
+			'filename' => $filename,
+			'ref' => $lesson_id,
+			'type' => 'lesson',
+		]);
+	}
 
 	echo json_encode(['status' => true, 'message' => "Success"]);
 }

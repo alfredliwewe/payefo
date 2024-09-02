@@ -77,7 +77,7 @@ if (isset($_SESSION['student_id'])) {
 	}
 	else{
 		$files = [
-			'jsx/admin.jsx',
+			'jsx/student.jsx',
 			'jsx/Strings.ts'
 		];
 	}

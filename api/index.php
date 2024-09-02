@@ -19,6 +19,7 @@ if (isset($_POST['email_login'], $_POST['password'])) {
 				$_SESSION['phone'] = $data['phone'];
 				$_SESSION['name'] = $data['name'];
 				$_SESSION['student_id'] = $data['id'];
+				$_SESSION['data'] = $data;
 
 				echo json_encode(['status' => true, 'link' => 'student/']);
 			}
