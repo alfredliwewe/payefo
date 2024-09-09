@@ -1,6 +1,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#085a9d">
-<link rel="icon" type="image/png" href="../images/ufanuzi.png">
+<link rel="icon" type="image/png" href="../uploads/<?=$config['logo'];?>">
 <link rel="stylesheet" type="text/css" href="../../resources/w3css/w3.css">
 <link rel="stylesheet" type="text/css" href="../../resources/w3css/tailwind.css">
 <link rel="stylesheet" type="text/css" href="../w3css/w3-theme-indigo.css">
@@ -30,7 +30,7 @@
 <script type="text/javascript" src="../../resources/toastify/src/toastify.js"></script>
 
 <link rel="stylesheet" type="text/css" href="../../vendor/bootstrap/css/bootstrap.min.css">
-<link rel="stylesheet" type="text/css" href="../semantic/semantic.min.css">
+<link rel="stylesheet" type="text/css" href="../../resources/semantic/semantic.min.css">
 
 <!--<script type="text/javascript" src="exportTable.js"></script>-->
 <script type="text/javascript" src="../../resources/react.js"></script>

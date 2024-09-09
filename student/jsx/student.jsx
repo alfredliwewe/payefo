@@ -90,7 +90,7 @@ window.onload = function(){
 }
 
 function Index(){
-    const [page,setPage]= useState("Home"); //Home
+    const [page,setPage]= useState("Lessons"); //Home
     const [hasSubscribed,setHasSubscribed] = useState(false);
     const [activeBook,setActiveBook] = useState({})
     const [settings,setSettings] = useState({
@@ -437,9 +437,7 @@ function Profile(props){
                     let res = JSON.parse(response);
 
                     if (res.status){
-                        window.localStorage.setItem("user", response);
-                        user = JSON.parse(window.localStorage.getItem("user"));
-                        setPicture(user.photo);
+                        setUser({...user, photo:res.filename});
                     }
                 }
                 catch (e) {
@@ -972,6 +970,7 @@ function LessonView(props){
                     <CardContent>
                         <Typography variant="h4">{props.data.title}</Typography>
                         <p>{props.data.text}</p>
+                        <p>{props.data.attachments.length} attachments</p>
 
                         <Box>
                             <Button onClick={e=>{
@@ -1078,13 +1077,15 @@ function Lesson(){
                                     getComments();
                                 }} />
 
-                                {comments.length > 0 && <>
-                                    <Divider sx={{mt:2}}/>
+                                <div className="ui comments">
+                                    {comments.length > 0 && <>
+                                        <Divider sx={{mt:2}}/>
 
-                                    {comments.map((row,index)=>(
-                                        <CommentView data={row} key={row.id}/>
-                                    ))}
-                                </>}
+                                        {comments.map((row,index)=>(
+                                            <CommentView2 data={row} key={row.id}/>
+                                        ))}
+                                    </>}
+                                </div>
                             </CardContent>
                         </Card>
                     </div>}
@@ -1106,7 +1107,7 @@ function CommentBox(props) {
                 if(res.status){
                     props.onSuccess();
                     Toast("Success");
-                    event.target.form.reset();
+                    event.target.reset();
                 }
             }
             catch(E){
@@ -1119,6 +1120,7 @@ function CommentBox(props) {
         <>
             <form onSubmit={saveComment}>
                 <input type="hidden" name="lesson_id" value={props.data.id} />
+                <input type="hidden" name="parent" value={0} />
                 <Box
                     component="div"
                     sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%',border:"1px solid #ddd",borderRadius:"7px" }}>
@@ -1207,6 +1209,102 @@ function CommentView(props){
                         </Box>
                     </CardContent>
                 </>
+            </div>
+        </>
+    )
+}
+
+function CommentView2(props){
+    const [open,setOpen] = useState({
+        reply:false
+    });
+    const [replies,setReplies] = useState([]);
+    const [hasLiked,setHasLiked] = useState(false);
+
+    const getReplies = () => {
+        $.get("api/", {getReplies:props.data.id}, res=>setReplies(res));
+    }
+
+    const saveComment = (event) => {
+        event.preventDefault();
+
+        let formdata = new FormData(event.target);
+
+        post("api/", formdata, response=>{
+            try{
+                let res = JSON.parse(response);
+                if(res.status){
+                    getReplies();
+                    Toast("Success");
+                    event.target.reset();
+                }
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
+
+    const toggleLike = () => {
+        $.post("api/", {toggleLike:props.data.id}, response=>{
+            //
+            try{
+                let res = JSON.parse(response);
+                setHasLiked(res.hasLiked);
+                Toast(res.message);
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
+
+    useEffect(()=>{
+        getReplies();
+    });
+
+    return (
+        <>
+            <div className="comment">
+                <a className="avatar">
+                    <img src={"../uploads/"+props.data.user_data.photo} />
+                </a>
+                <div className="content">
+                    <a className="author">{props.data.user_data.name}</a>
+                    <div className="metadata">
+                        <div className="date">{props.data.ago}</div>
+                    </div>
+                    <div className="text">
+                        <p>{props.data.comment}</p>
+                    </div>
+                    <div className="actions">
+                        <a className="reply" onClick={e=>setOpen({...open, reply:!open.reply})}>Reply</a>
+                        <a class="save">Replies ({replies.length})</a>
+                        <a class="hide">Likes ({props.data.likes})</a>
+                        <a onClick={toggleLike}>
+                            <i class="icon thumbs up outline"></i>
+                            Like
+                        </a>
+                    </div>
+
+                    <form className="ui reply form" onSubmit={saveComment} style={{display:(open.reply?"block":"none")}}>
+                        <input type="hidden" name="parent" value={props.data.id} />
+                        <input type="hidden" name="lesson_id" value={props.data.ref} />
+                        <div className="field">
+                            <textarea name="new_comment"></textarea>
+                        </div>
+                        <button className="ui primary submit labeled icon button" type="submit">
+                            <i className="icon edit"></i> Add Reply
+                        </button>
+                    </form>
+                </div>
+                {replies.length > 0 && <>
+                    <div className="comments">
+                        {replies.map((row,index)=>(
+                            <CommentView2 data={row} key={row.id} />
+                        ))}
+                    </div>
+                </>}
             </div>
         </>
     )

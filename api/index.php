@@ -40,6 +40,7 @@ if (isset($_POST['email_login'], $_POST['password'])) {
 				$_SESSION['phone'] = $data['phone'];
 				$_SESSION['name'] = $data['name'];
 				//$_SESSION['role'] = $data['role'];
+				$_SESSION['data'] = $data;
 
 				$data['status'] = true;
 				$data['link'] = 'teacher/';

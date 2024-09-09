@@ -95,7 +95,9 @@ elseif (isset($_GET['getSubjects'])) {
 elseif (isset($_GET['getUser'])) {
 
 	header('Content-Type: application/json; charset=utf-8');
-	echo json_encode($_SESSION['data']);
+	echo json_encode(getData("students", [
+		'id' => $_SESSION['data']['id']
+	]));
 }
 elseif(isset($_POST['subject_lessons'], $_POST['form'])){
 	$subject = (int)$_POST['subject_lessons'];
@@ -124,6 +126,7 @@ elseif(isset($_POST['subject_lessons'], $_POST['form'])){
 		$row['comments'] = (int)$db->query("SELECT COUNT(id) FROM comments WHERE ref = '{$row['id']}' ")->fetch_array()[0];
 		$row['opened'] = (int)$db->query("SELECT COUNT(id) FROM progress WHERE ref = '{$row['id']}' AND type = 'lesson' ")->fetch_array()[0];
 		$row['attended'] = $db->query("SELECT DISTINCT student FROM progress WHERE ref = '{$row['id']}' AND type = 'lesson' ")->num_rows;
+		$row['attachments'] = getAll("attachments", ['ref' => $row['id'], 'type' => 'lesson']);
 		array_push($rows, $row);
 	}
 
@@ -139,6 +142,51 @@ elseif (isset($_POST['saveOpened'])) {
 	]);
 
 	echo json_encode(['status' => true, 'message' => "Success"]);
+}
+elseif (isset($_FILES['change_picture'])) {
+	$filename = $_FILES['change_picture']['name'];
+
+	if (move_uploaded_file($_FILES['change_picture']['tmp_name'], "../../uploads/$filename")) {
+		db_update("students", [
+			'photo' => $filename
+		], ['id' => $_SESSION['student_id']]);
+
+		echo json_encode([
+			'status' => true,
+			'message' => "Success",
+			'filename' => $filename
+		]);
+	}
+	else{
+		echo json_encode(['status' => false, 'message' => "Failed to upload"]);
+	}
+}
+elseif(isset($_POST['toggleLike'])){
+	$check = getData("likes", ['user' => $_SESSION['student_id'], 'post' => $_POST['toggleLike']]);
+	//header('Content-Type: application/json; charset=utf-8');
+	if ($check == null) {
+		db_insert("likes", [
+			'user' => $_SESSION['student_id'],
+			'post' => $_POST['toggleLike'],
+			'type' => 'comment',
+			'date_added' => $time,
+		]);
+
+		echo json_encode([
+			'status' => true,
+			'message' => "Liked",
+			'hasLiked' => true
+		]);
+	}
+	else{
+		db_delete("likes", ['id' => $check['id']]);
+
+		echo json_encode([
+			'status' => true,
+			'message' => "Hated it",
+			'hasLiked' => false
+		]);
+	}
 }
 elseif (isset($_GET['getComments'])) {
 	$post = (int)$_GET['getComments'];
@@ -157,10 +205,43 @@ elseif (isset($_GET['getComments'])) {
 		$teachers[$row['id']] = $row;
 	}
 
-	$read = $db->query("SELECT * FROM comments WHERE ref = '$post' ORDER BY id DESC ");
+	$read = $db->query("SELECT * FROM comments WHERE ref = '$post' AND parent = '0' ORDER BY id DESC ");
 	while ($row = $read->fetch_assoc()) {
 		$row['user_data'] = $row['user_type'] == 'student' ? $students[$row['user']] : $teachers[$row['user']];
+		$row['user_data']['photo'] = isset($row['user_data']['photo']) ? $row['user_data']['photo'] : $row['user_data']['picture'];
+
 		$row['ago'] = time_ago($row['date_added']);
+		$row['likes'] = count(getAll("likes", ['post' => $row['id']]));
+		array_push($rows, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
+}
+elseif (isset($_GET['getReplies'])) {
+	$post = (int)$_GET['getReplies'];
+
+	$rows = [];
+
+	$students = [];
+	$read = $db->query("SELECT * FROM students");
+	while ($row = $read->fetch_assoc()) {
+		$students[$row['id']] = $row;
+	}
+
+	$teachers = [];
+	$read = $db->query("SELECT * FROM staff");
+	while ($row = $read->fetch_assoc()) {
+		$teachers[$row['id']] = $row;
+	}
+
+	$read = $db->query("SELECT * FROM comments WHERE parent = '$post' ORDER BY id DESC ");
+	while ($row = $read->fetch_assoc()) {
+		$row['user_data'] = $row['user_type'] == 'student' ? $students[$row['user']] : $teachers[$row['user']];
+		$row['user_data']['photo'] = isset($row['user_data']['photo']) ? $row['user_data']['photo'] : $row['user_data']['picture'];
+
+		$row['ago'] = time_ago($row['date_added']);
+		$row['likes'] = count(getAll("likes", ['post' => $row['id']]));
 		array_push($rows, $row);
 	}
 
@@ -175,6 +256,7 @@ elseif(isset($_POST['lesson_id'], $_POST['new_comment'])){
 		'date_added' => $time,
 		'status' => 'active',
 		'ref' => $_POST['lesson_id'],
+		'parent' => (int)$_POST['parent']
 	]);
 
 	echo json_encode(['status' => true, 'message' => "Success"]);

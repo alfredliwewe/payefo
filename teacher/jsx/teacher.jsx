@@ -2,7 +2,7 @@ const {TextField,Button,Alert,ListItem,ListItemButton,ListItemIcon,ListItemText,
     TableHead,ThemeProvider,createTheme,Radio,Divider,
     TableRow,Tabs, Tab,Box,Chip,Typography, FormLabel,Rating,DialogTitle,DialogActions,DialogContent,DialogContentText,
     TableCell,TablePagination,Drawer,Link,MenuItem,Dialog,Input,
-    TableBody,Fab, Card,
+    TableBody,Fab, Card,IconButton,InputBase,
     CardHeader,Avatar,
     CardContent
 } = MaterialUI;
@@ -162,6 +162,7 @@ function Index(){
                     page == "View" ? <View />:
                     page == "Lessons" ? <Lessons />:
                     page == "Lesson" ? <Lesson />:
+                    page == "Profile" ? <Profile />:
                     page == "System Values" ? <Settings />:
                     <>{page}</>}
                 </div>
@@ -196,12 +197,11 @@ function Home(){
 
 function Profile(props){
     const [value, setValue] = React.useState(0);
-    const [picture, setPicture] = React.useState(user.photo);
     const [modals, setModals] = useState({
         editEmail:false,
         editName:false
     });
-    const [user2, setUser2] = useState({...user});
+    const [user, setUser] = useState({id:0,name:"",picture:"default_avatar.png"});
   
     const handleChange = (event, newValue) => {
         setValue(newValue);
@@ -231,9 +231,7 @@ function Profile(props){
                     let res = JSON.parse(response);
 
                     if (res.status){
-                        window.localStorage.setItem("user", response);
-                        user = JSON.parse(window.localStorage.getItem("user"));
-                        setPicture(user.photo);
+                        setUser({...user, picture:res.filename});
                     }
                 }
                 catch (e) {
@@ -259,9 +257,8 @@ function Profile(props){
     }
 
     const getUser = () => {
-        $.get("api/", {getCurrentUser:"true"}, function(res){
-            setUser2(res);
-            localStorage.setItem("user", JSON.stringify(res));
+        $.get("api/", {getUser:"true"}, function(res){
+            setUser(res);
         })
     }
 
@@ -294,6 +291,10 @@ function Profile(props){
         })
     }
 
+    useEffect(()=>{
+        getUser();
+    }, []);
+
     return (
         <div>
             <div className="w3-padding-large w3-large alert-warning text-dark">
@@ -303,7 +304,7 @@ function Profile(props){
                 <div className="w3-row">
                     <div className="w3-col m1">&nbsp;</div>
                     <div className="w3-col m3 pl-20 pr-20">
-                        <img src={"../uploads/"+picture} width="100%" />
+                        <img src={"../uploads/"+user.picture} width="100%" />
                     </div>
                     <div className="w3-col m8 pr-20 pl-20">
                         <Typography variant="h4" component="h1" gutterBottom>
@@ -347,7 +348,7 @@ function Profile(props){
                                             <Link href="#" onClick={e=>{
                                                 setModals({...modals, editEmail: true});
                                             }
-                                            }>{user2.email}</Link>
+                                            }>{user.email}</Link>
                                         </div>
                                     </div>
                                     <div className="w3-row pt-15">
@@ -355,7 +356,7 @@ function Profile(props){
                                             <font className="bold">Name:</font>
                                         </div>
                                         <div className="w3-col m9">
-                                            <Link href="#" onClick={e=>setModals({...modals, editName: true})}>{user2.name}</Link>
+                                            <Link href="#" onClick={e=>setModals({...modals, editName: true})}>{user.name}</Link>
                                         </div>
                                     </div>
                                 </TabPanel>
@@ -367,46 +368,50 @@ function Profile(props){
                     </div>
                 </div>
             </div>
-            <div>
-                <Dialog
-                    open={open}
-                    onClose={handleClose}
-                    aria-labelledby="alert-dialog-title"
-                    aria-describedby="alert-dialog-description"
-                    size="small"
-                    >
-                    <DialogTitle id="alert-dialog-title">
-                        Change password
-                    </DialogTitle>
-                    <DialogContent>
-                        <DialogContentText id="alert-dialog-description">
-                            &nbsp;
-                        </DialogContentText>
-                        <form onSubmit={changePassword}>
-                            <TextField
-                                id="filled-password-input"
-                                label="Enter new Password"
-                                name="admin_new_password"
-                                fullWidth
-                                type="password"
-                                sx={{mb:3, mt:2}}
-                                size="small" />
 
-                            <Button type="submit" role="submit" sx={{mt:2}} variant="contained">Save Changes</Button>
-                        </form>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={handleClose}>
-                            Close
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-            </div>
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                aria-labelledby="alert-dialog-title"
+                aria-describedby="alert-dialog-description"
+                size="small"
+                >
+                <DialogTitle id="alert-dialog-title">
+                    Change password
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText id="alert-dialog-description">
+                        &nbsp;
+                    </DialogContentText>
+                    <form onSubmit={changePassword}>
+                        <TextField
+                            id="filled-password-input"
+                            label="Enter new Password"
+                            name="admin_new_password"
+                            fullWidth
+                            type="password"
+                            sx={{mb:3, mt:2}}
+                            size="small" />
+
+                        <Button type="submit" role="submit" sx={{mt:2}} variant="contained">Save Changes</Button>
+                    </form>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={handleClose}>
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <div className={"w3-modal"} style={{display:(modals.editEmail?"block":"none")}}>
                 <div className={"w3-modal-content w3-round-large shadow w3-padding"} style={{width:"370px"}}>
                     <font className={"w3-large block"}>Edit Email</font>
-                    <TextField label={"Change Email"} sx={{mt:3}} value={user2.email} onChange={e=>setUser2({...user2, email:e.target.value})} fullWidth size={"small"} />
+                    <TextField 
+                        label={"Change Email"} 
+                        sx={{mt:3}} 
+                        value={user.email} 
+                        onChange={e=>setUser({...user, email:e.target.value})} 
+                        fullWidth size={"small"} />
 
                     <div className={"w3-row pt-30 pb-15"}>
                         <div className={"w3-half w3-padding"}>
@@ -422,7 +427,13 @@ function Profile(props){
             <div className={"w3-modal"} style={{display:(modals.editName?"block":"none")}}>
                 <div className={"w3-modal-content w3-round-large shadow w3-padding"} style={{width:"370px"}}>
                     <font className={"w3-large block"}>Edit Name</font>
-                    <TextField label={"Change Name"} sx={{mt:3}} value={user2.name} onChange={e=>setUser2({...user2, name:e.target.value})} fullWidth size={"small"} />
+                    <TextField 
+                        label={"Change Name"} 
+                        sx={{mt:3}} 
+                        value={user.name} 
+                        onChange={e=>setUser({...user, name:e.target.value})} 
+                        fullWidth 
+                        size={"small"} />
 
                     <div className={"w3-row pt-30 pb-15"}>
                         <div className={"w3-half w3-padding"}>
@@ -1117,6 +1128,7 @@ function LessonView(props){
                     <CardContent>
                         <Typography variant="h4">{props.data.title}</Typography>
                         <p>{props.data.text}</p>
+                        <p>{props.data.attachments.length} attachments</p>
 
                         <Box>
                             <Button onClick={e=>{
@@ -1139,49 +1151,271 @@ function LessonView(props){
 function Lesson(){
     const [data,setData] = useStorage('lesson', {id:0});
     const {page,setPage} = useContext(Context);
+    const [comments,setComments] = useState([]);
+    const [attachments,setAttachments] = useState([]);
+
+    const getComments = () => {
+        $.get("api/", {getComments:data.id}, res=>setComments(res));
+    }
+
+    const getAttachments = () => {
+        $.get("api/", {getAttachments:data.id,type:"lesson"}, res=>setAttachments(res));
+    }
+
+    const fileExtension = (filename) => {
+        let chars = filename.split(".")
+        return chars[chars.length-1].toLowerCase();;
+    }
+
+    const fileType = (filename) => {
+        let ext = fileExtension(filename);
+
+        if(["png","jpg","jpeg","webp","gif"].includes(ext)){
+            return "img";
+        }
+        else{
+            return ext;
+        }
+    }
 
     useEffect(()=>{
         if(data.id != 0){
             $.post("api/", {saveOpened:data.id}, res=>{
                 //
-            })
+            });
+
+            getComments();
+            getAttachments();
         }
     }, []);
 
     return (
         <>
-            {data.id != 0 && <div className="p-2 mt-3">
-                <Card sx={{ width: '100%',borderRadius:"24px" }}>
+            <div className="w3-row">
+                <div className="w3-col m1">&nbsp;</div>
+                <div className="w3-col m10">
+                    {data.id != 0 && <div className="p-2 mt-3">
+                        <Card sx={{ width: '100%',borderRadius:"24px" }}>
+                            <CardHeader
+                                avatar={
+                                    <img width={40} style={{borderRadius:"50%"}} src={"../uploads/"+data.admin_data.picture} />
+                                }
+                                action={
+                                    <Fab size="small" sx={{boxShadow:"none"}}>
+                                        <i className="far fa-bookmark text-lg"/>
+                                    </Fab>
+                                }
+                                title={data.admin_data.name}
+                                subheader={"teacher - "+data.ago}
+                            />
+                            <CardContent>
+                                <Typography variant="h4">{data.title}</Typography>
+                                <p>{data.text}</p>
+
+                                <div className="flex gap-1 my-2">
+                                    {attachments.map((row,index)=>(
+                                        <>{fileType(row.filename) == "img" ? <>
+                                            <img src={"../uploads/"+row.filename} height={"140"} className="rounded"/>
+                                        </>:
+                                        <>
+                                            <video height={"140"} controls>
+                                                <source src={"../uploads/"+row.filename} className="rounded" type="video/mp4"/>
+                                            </video>
+                                        </>}</>
+                                    ))}
+                                </div>
+
+                                <Box sx={{mb:2}}>
+                                    <Button variant="outlined">Comments ({data.comments})</Button>
+                                    <Button sx={{ml:1}} variant="text">Attended ({data.attended})</Button>
+                                    <Button sx={{ml:1}} variant="text">Opened ({data.opened})</Button>
+                                    <Button  sx={{ml:1}} variant="text">Save <i className="far fa-bookmark ml-2"/></Button>
+                                </Box>
+                                <CommentBox data={data} onSuccess={()=>{
+                                    getComments();
+                                }} />
+
+                                <div className="ui comments">
+                                    {comments.length > 0 && <>
+                                        <Divider sx={{mt:2}}/>
+
+                                        {comments.map((row,index)=>(
+                                            <CommentView2 data={row} key={row.id}/>
+                                        ))}
+                                    </>}
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>}
+                </div>
+            </div>
+        </>
+    )
+}
+
+function CommentBox(props) {
+    const saveComment = (event) => {
+        event.preventDefault();
+
+        let formdata = new FormData(event.target);
+
+        post("api/", formdata, response=>{
+            try{
+                let res = JSON.parse(response);
+                if(res.status){
+                    props.onSuccess();
+                    Toast("Success");
+                    event.target.reset();
+                }
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
+
+    return (
+        <>
+            <form onSubmit={saveComment}>
+                <input type="hidden" name="lesson_id" value={props.data.id} />
+                <input type="hidden" name="parent" value={0} />
+                <Box
+                    component="div"
+                    sx={{ p: '2px 4px', display: 'flex', alignItems: 'center', width: '100%',border:"1px solid #ddd",borderRadius:"7px" }}>
+                    <IconButton sx={{ p: '7px',display:"none" }} size="small" aria-label="menu">
+                        <i className="fa fa-bars" />
+                    </IconButton>
+                    <InputBase
+                        multiline
+                        rows={2}
+                        sx={{ ml: 1, flex: 1 }}
+                        size="small"
+                        name="new_comment"
+                        placeholder="Write comment"
+                        required
+                        inputProps={{ 'aria-label': 'search google maps' }}
+                        />
+                    <IconButton type="button" size="small" sx={{ p: '7px' }} aria-label="search">
+                        <i className="fa fa-paperclip" />
+                    </IconButton>
+                    <Divider sx={{ height: 28, m: 0.5 }} orientation="vertical" />
+                    <IconButton type="submit" color="primary" size="small" sx={{ p: '7px' }} aria-label="directions">
+                        <i className="fa fa-location-arrow" />
+                    </IconButton>
+                </Box>
+            </form>
+        </>
+    );
+}
+
+function CommentView(props){
+    const [data,setData] = useState(props);
+
+    return (
+        <>
+            <div className="mt-3">
+                <>
                     <CardHeader
                         avatar={
-                            <Avatar sx={{ bgcolor: red[500] }} aria-label="recipe">R</Avatar>
+                            <img width={40} style={{borderRadius:"50%"}} src={"../uploads/"+props.data.user_data.photo} />
                         }
                         action={
-                            <Fab size="small" sx={{boxShadow:"none"}}>
-                                <i className="far fa-bookmark text-lg"/>
-                            </Fab>
+                            <></>
                         }
-                        title={data.admin_data.name}
-                        subheader={"teacher - "+data.ago}
+                        title={props.data.user_data.name}
+                        subheader={props.data.user_type+" - "+props.data.ago}
                     />
-                    <CardContent>
-                        <Typography variant="h4">{data.title}</Typography>
-                        <p>{data.text}</p>
+                    <CardContent sx={{p:1}}>
+                        <p>{props.data.comment}</p>
 
                         <Box>
-                            <Button onClick={e=>{
-                                localStorage.setItem("lesson", data);
-                                setPage("Lesson")
-                            }}>Open</Button>
-
-                            <Button sx={{ml:1}} variant="text">Comments ({data.comments})</Button>
-                            <Button sx={{ml:1}} variant="text">Attended ({data.attended})</Button>
-                            <Button sx={{ml:1}} variant="text">Opened ({data.opened})</Button>
-                            <Button  sx={{ml:1}} variant="text">Save <i className="far fa-bookmark ml-2"/></Button>
+                            <Button variant="text">Replies ({data.comments})</Button>
+                            <Button sx={{ml:1}} variant="text">Like ({data.attended})</Button>
                         </Box>
                     </CardContent>
-                </Card>
-            </div>}
+                </>
+            </div>
+        </>
+    )
+}
+
+function CommentView2(props){
+    const [open,setOpen] = useState({
+        reply:false
+    });
+    const [replies,setReplies] = useState([]);
+
+    const getReplies = () => {
+        $.get("api/", {getReplies:props.data.id}, res=>setReplies(res));
+    }
+
+    const saveComment = (event) => {
+        event.preventDefault();
+
+        let formdata = new FormData(event.target);
+
+        post("api/", formdata, response=>{
+            try{
+                let res = JSON.parse(response);
+                if(res.status){
+                    getReplies();
+                    Toast("Success");
+                    event.target.reset();
+                }
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
+
+    useEffect(()=>{
+        getReplies();
+    });
+
+    return (
+        <>
+            <div className="comment">
+                <a className="avatar">
+                    <img src={"../uploads/"+props.data.user_data.photo} />
+                </a>
+                <div className="content">
+                    <a className="author">{props.data.user_data.name}</a>
+                    <div className="metadata">
+                        <div className="date">{props.data.ago}</div>
+                    </div>
+                    <div className="text">
+                        <p>{props.data.comment}</p>
+                    </div>
+                    <div className="actions">
+                        <a className="reply" onClick={e=>setOpen({...open, reply:!open.reply})}>Reply</a>
+                        <a class="save">Replies ({replies.length})</a>
+                        <a class="hide">Likes</a>
+                        <a>
+                            <i class="icon thumbs up outline"></i>
+                            Like
+                        </a>
+                    </div>
+
+                    <form className="ui reply form" onSubmit={saveComment} style={{display:(open.reply?"block":"none")}}>
+                        <input type="hidden" name="parent" value={props.data.id} />
+                        <input type="hidden" name="lesson_id" value={props.data.ref} />
+                        <div className="field">
+                            <textarea name="new_comment"></textarea>
+                        </div>
+                        <button className="ui primary submit labeled icon button" type="submit">
+                            <i className="icon edit"></i> Add Reply
+                        </button>
+                    </form>
+                </div>
+                {replies.length > 0 && <>
+                    <div className="comments">
+                        {replies.map((row,index)=>(
+                            <CommentView2 data={row} key={row.id} />
+                        ))}
+                    </div>
+                </>}
+            </div>
         </>
     )
 }

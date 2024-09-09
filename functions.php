@@ -42,10 +42,16 @@ function getAll($table, $ref=null){
 		return $rows;
 	}
 	else{
-		$read = $db->query("SELECT * FROM `$table` ");
+		$wheres = [];
+
+		foreach ($ref as $key => $value) {
+			array_push($wheres, "`$key` = '$value' ");
+		}
+
+		$read = $db->query("SELECT * FROM `$table` WHERE ".implode(" AND ", $wheres));
 		$rows = [];
 		while ($row = $read->fetch_assoc()) {
-			$rows[$row[$ref]] = $row;
+			array_push($rows, $row);
 		}
 
 		return $rows;
