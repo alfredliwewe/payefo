@@ -943,7 +943,7 @@ function CreateLesson(props){
     const fileType = (filename) => {
         let ext = fileExtension(filename);
 
-        if(["png","jpg","jpeg","webp","gif"].includes(ext)){
+        if(["png","jpg","jpeg","webp","gif","tiff"].includes(ext)){
             return "img";
         }
         else{
@@ -962,7 +962,7 @@ function CreateLesson(props){
                 pure_files.push(file);
 
                 file.src = URL.createObjectURL(file);
-                file.typeFile = fileType(input.name)
+                file.typeFile = fileType(file.name)
                 files.push(file)
             }
 
@@ -1371,7 +1371,7 @@ function CommentView2(props){
 
     useEffect(()=>{
         getReplies();
-    });
+    }, []);
 
     return (
         <>

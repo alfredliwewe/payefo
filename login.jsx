@@ -96,7 +96,8 @@ function Login(){
     });
     const [settings,setSettings] = useState({
         logo:"clogo.png",
-        name:"School"
+        name:"School",
+        reg_fee:50
     })
 	const [showPassword, setShowPassword] = React.useState(false);
 	const [stage, setStage] = useState("login");
@@ -225,6 +226,7 @@ function Login(){
                     </form>:
                     stage == "register"?
                     <form onSubmit={handleSubmit} className="pb-20">
+                        <Alert severity="info" sx={{mt:2}}>To complete registration, you are required to pay a non refundable fee of MWK{settings.reg_fee}</Alert>
                         <TextField
                             id="filled-password-input"
                             sx={{ mt: 2}} 

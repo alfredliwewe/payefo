@@ -90,7 +90,7 @@ window.onload = function(){
 }
 
 function Index(){
-    const [page,setPage]= useState("Lessons"); //Home
+    const [page,setPage]= useState("Home"); //Home
     const [hasSubscribed,setHasSubscribed] = useState(false);
     const [activeBook,setActiveBook] = useState({})
     const [settings,setSettings] = useState({
@@ -199,17 +199,17 @@ function Home(){
     });
     const [method,setMethod] = useState(0);
     const [methods,setMethods] = useState([
-        {
+        /*{
             id:1,
             title:"VISA",
             icon:"fab fa-cc-visa",
             description:"You will subscribe for 3 months"
-        },
+        },*/
         {
             id:2,
-            title:"Paypal",
+            title:"Airtel Money or Mpamba",
             icon:"fab fa-cc-paypal",
-            description:"You will subscribe for 3 months"
+            description:"We will redirect to paychangu. Follow the steps"
         },
         {
             id:3,
@@ -223,6 +223,33 @@ function Home(){
         transId:""
     })
 
+    const makePayment = () => {
+        let random = Math.floor((Math.random() * 1000000000) + 1);
+        $.post("api/", {saveRef:random,type:"fees",package:active.id}, res=>{
+            PaychanguCheckout({
+                "public_key": "pub-live-AkdzhBXueOLvshxcT4icXi8xg9L1WhMB",
+                "tx_ref": '' + random,
+                "amount": active.price,
+                "currency": "MWK",
+                //"callback_url": "https://malawi-schools.com/payefo/success-changu.php",
+                "callback_url": "https://localhost/payefo/success-changu.php",
+                "return_url": "https://example.com/returnurl",
+                "customer":{
+                    "email": "yourmail@example.com",
+                    "first_name":"Mac",
+                    "last_name":"Phiri",
+                },
+                "customization": {
+                    "title": "Registration Payment",
+                    "description": "First payment to register",
+                },
+                "meta": {
+                    "uuid": "uuid",
+                    "response": "Response"
+                }
+            });
+        });
+    }
 
     const getData = () => {
         $.get("api/", {getDashboardData:"true"}, function(res){
@@ -334,11 +361,14 @@ function Home(){
                         ))}
 
                         {method != 0 && <Button variant="outlined" onClick={e=>{
-                            if(method != 3){
-                                Toast("Not implemented yet");
+                            if(method == 2){
+                                makePayment();
+                            }
+                            else if(method == 3){
+                                setOpen({...open, method:false, confirm:true});
                             }
                             else{
-                                setOpen({...open, method:false, confirm:true});
+                                Toast("Not implemented yet");
                             }
                         }}>
                             Continue
@@ -871,6 +901,7 @@ function AvailableLessons(){
     const [subjects,setSubjects] = useState([]);
     const [books,setBooks] = useState([]);
     const [rows,setRows] = useState([]);
+    const {hasSubscribed} = useContext(Context);
 
     const [form,setForm] = useStorage('school-form', {form:0,subject:0});
 
@@ -900,43 +931,47 @@ function AvailableLessons(){
             <div className="w3-row">
                 <div className="w3-col m2">&nbsp;</div>
                 <div className="w3-col m8 pt-4">
-                    <form onSubmit={filterRecords} className="py-2">
-                        <TextField 
-                            label="Subject" 
-                            sx={{width:180}} 
-                            size="small" 
-                            select 
-                            value={form.subject}
-                            onChange={e=>setForm({...form, subject:e.target.value})}
-                            name="subject_lessons">
-                            {subjects.map((row,index)=>(
-                                <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
-                            ))}
-                        </TextField>
+                    {hasSubscribed ?
+                    <>
+                        <form onSubmit={filterRecords} className="py-2">
+                            <TextField 
+                                label="Subject" 
+                                sx={{width:180}} 
+                                size="small" 
+                                select 
+                                value={form.subject}
+                                onChange={e=>setForm({...form, subject:e.target.value})}
+                                name="subject_lessons">
+                                {subjects.map((row,index)=>(
+                                    <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
+                                ))}
+                            </TextField>
 
-                        <TextField 
-                            label="Form" 
-                            sx={{width:180,mx:2}} 
-                            size="small" 
-                            select 
-                            value={form.form}
-                            onChange={e=>setForm({...form, form:e.target.value})}
-                            name="form">
-                            {[1,2,3,4].map((row,index)=>(
-                                <MenuItem value={row} key={row}>{row}</MenuItem>
-                            ))}
-                        </TextField>
+                            <TextField 
+                                label="Form" 
+                                sx={{width:180,mx:2}} 
+                                size="small" 
+                                select 
+                                value={form.form}
+                                onChange={e=>setForm({...form, form:e.target.value})}
+                                name="form">
+                                {[1,2,3,4].map((row,index)=>(
+                                    <MenuItem value={row} key={row}>{row}</MenuItem>
+                                ))}
+                            </TextField>
 
-                        <Button variant="outlined" type="submit">Submit</Button>
-                    </form>
+                            <Button variant="outlined" type="submit">Submit</Button>
+                        </form>
 
-                    <Divider/>
+                        <Divider/>
 
-                    {rows.map((row,index)=>(
-                        <LessonView data={row} key={row.id}/>
-                    ))}
+                        {rows.map((row,index)=>(
+                            <LessonView data={row} key={row.id}/>
+                        ))}
 
-                    {rows.length == 0 && <Alert severity="error">No lessons available for this selection</Alert>}
+                        {rows.length == 0 && <Alert severity="error">No lessons available for this selection</Alert>}
+                    </>:
+                    <Alert severity="error" sx={{m:3}}>You do not have an active subscription</Alert>}
                 </div>
             </div>
         </>

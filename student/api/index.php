@@ -99,6 +99,29 @@ elseif (isset($_GET['getUser'])) {
 		'id' => $_SESSION['data']['id']
 	]));
 }
+
+elseif (isset($_POST['saveRef'], $_POST['type'])) {
+	db_delete("progress", ['student' => $_SESSION['student_id'], 'type' => $_POST['type']]);
+
+	db_insert("progress", [
+		'student' => $_SESSION['student_id'],
+		'ref' => $_POST['saveRef'],
+		'type' => $_POST['type'],
+		'date_added' => $time,
+	]);
+
+	if (isset($_POST['package'])) {
+		db_insert("progress", [
+			'student' => $_SESSION['student_id'],
+			'ref' => $_POST['package'],
+			'type' => $_POST['saveRef'],
+			'date_added' => $time,
+		]);
+	}
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
+}
+
 elseif(isset($_POST['subject_lessons'], $_POST['form'])){
 	$subject = (int)$_POST['subject_lessons'];
 	$form = (int)$_POST['form'];

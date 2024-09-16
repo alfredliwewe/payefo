@@ -1,6 +1,8 @@
 <?php 
 session_start();
 require '../db.php';
+require '../functions.php';
+
 if (isset($_SESSION['student_id'])) {
 	$name = $_SESSION['name'];
 }
@@ -70,16 +72,35 @@ else{
 </body>
 <?php 
 if (isset($_SESSION['student_id'])) {
-	if (strpos(strtolower($_SERVER['HTTP_USER_AGENT']), "android") OR strpos(strtolower($_SERVER['HTTP_USER_AGENT']), "iphone")) {
-		$files = [
-			'jsx/mobile.jsx',
-			'jsx/Strings.ts'
-		];
+	?>
+	<!--<script src="https://in.paychangu.com/js/popup.js" type="text/javascript"></script>-->
+	<?php
+	echo "<script>".file_get_contents("../changu.js")."</script>";
+	?>
+	<script type="text/javascript">
+	</script>
+	<div id="wrapper"></div>
+	<?php
+
+	
+	$data = getData("students", ['id' => $_SESSION['student_id']]);
+	if ($data['status'] == "verified") {
+		if (strpos(strtolower($_SERVER['HTTP_USER_AGENT']), "android") OR strpos(strtolower($_SERVER['HTTP_USER_AGENT']), "iphone")) {
+			$files = [
+				'jsx/mobile.jsx',
+				'jsx/Strings.ts'
+			];
+		}
+		else{
+			$files = [
+				'jsx/student.jsx',
+				'jsx/Strings.ts'
+			];
+		}
 	}
 	else{
 		$files = [
-			'jsx/student.jsx',
-			'jsx/Strings.ts'
+			'jsx/complete.jsx'
 		];
 	}
 }
