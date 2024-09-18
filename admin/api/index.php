@@ -29,6 +29,7 @@ elseif (isset($_POST['login_email'], $_POST['password'])) {
 		$data['status'] = true;
 
 		$_SESSION['user_id'] = $data['id'];
+		$_SESSION['admin_id'] = $data['id'];
 		$_SESSION['data'] = $data;
 
 		echo json_encode($data);
@@ -222,6 +223,25 @@ elseif(isset($_POST['new_package'], $_POST['duration'], $_POST['price'], $_POST[
 	}
 	else{
 		echo json_encode(['status' => false, 'message' => "Package is already added"]);
+	}
+}
+
+elseif(isset($_POST['package_id'], $_POST['edit_package'], $_POST['duration'], $_POST['price'], $_POST['description'])){
+	db_update("packages", [
+		'name' => $_POST['edit_package'],
+		'duration' => $_POST['duration'],
+		'amount' => $_POST['price'],
+		'description' => $_POST['description'],
+	], ['id' => $_POST['package_id']]);
+
+	echo json_encode(['status' => true, 'message' => "Sucess"]);
+}
+elseif(isset($_FILES['settings_picture'], $_POST['name'])){
+	$filename = $_FILES['settings_picture']['name'];
+	if (move_uploaded_file($_FILES['settings_picture']['tmp_name'], "../../uploads/".$filename)) {
+		db_update("config", ['value' => $filename], ['name' => $_POST['name']]);
+
+		echo json_encode(['status' => true, 'message' => "Sucess", 'picture' => $filename]);
 	}
 }
 elseif (isset($_POST['rejectSubscription'])) {

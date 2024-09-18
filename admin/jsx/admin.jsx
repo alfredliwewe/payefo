@@ -1116,14 +1116,46 @@ function Packages(){
             </Dialog>
 
             <Drawer anchor="right" open={open.edit} onClose={()=>setOpen({...open, edit:false})}>
-                <div className="w3-padding-large" style={{width:"400px"}}>
+                <div className="p-3" style={{width:"340px"}}>
                     <CloseHeading label="Edit Package" onClose={()=>setOpen({...open, edit:false})}/>
                     <form onSubmit={edit}>
-                        <input type="hidden" name="country_id" value={active.id} />
-                        <TextField label="Country Name" fullWidth size="small" name="edit_country" value={active.name} onChange={e=>setActive({...active, name:e.target.value})} sx={{mt:2}} />
-                        <TextField label="Currency" fullWidth size="small" name="currency" value={active.currency} onChange={e=>setActive({...active, currency:e.target.value})} sx={{mt:2}} />
-                        <TextField label="Rating" fullWidth size="small" name="rating" value={active.rating} onChange={e=>setActive({...active, rating:e.target.value})} sx={{mt:2}} />
-                        <TextField label="Currency Code" fullWidth size="small" value={active.currency_code} onChange={e=>setActive({...active, currency_code:e.target.value})} name="currency_code" sx={{mt:2,mb:3}} />
+                        <input type="hidden" name="package_id" value={active.id} />
+                        <TextField 
+                            label="Package Name" 
+                            fullWidth 
+                            size="small" 
+                            name="edit_package" 
+                            value={active.name} 
+                            onChange={e=>setActive({...active, name:e.target.value})} 
+                            sx={{mt:2}} />
+                        <TextField 
+                            label="Durations(months)" 
+                            fullWidth 
+                            size="small" 
+                            name="duration" 
+                            type="number"
+                            value={active.duration} 
+                            onChange={e=>setActive({...active, duration:e.target.value})} 
+                            sx={{mt:2}} />
+
+                        <TextField 
+                            label="Price" 
+                            fullWidth 
+                            size="small" 
+                            name="price" 
+                            value={active.price} 
+                            onChange={e=>setActive({...active, price:e.target.value})} 
+                            sx={{mt:2}} />
+                        <TextField 
+                            label="Description" 
+                            fullWidth 
+                            size="small" 
+                            value={active.description} 
+                            multiline
+                            rows={3}
+                            onChange={e=>setActive({...active, description:e.target.value})} 
+                            name="description" 
+                            sx={{mt:2,mb:3}} />
 
                         <Button variant="contained" type="submit">Submit</Button>
                     </form>
@@ -1405,6 +1437,33 @@ function Settings(){
         return v;
     }
 
+    const uploadPicture  = (name) => {
+        let input = document.createElement("input");
+        input.type = 'file';
+        input.accept = 'image/*'
+
+        input.addEventListener('change', event=>{
+            let formdata = new FormData();
+            formdata.append("settings_picture", input.files[0]);
+            formdata.append("name", name);
+
+            post("api/", formdata, response=>{
+                try{
+                    let res = JSON.parse(response);
+                    if(res.status){
+                        setData({...data, [name]:res.picture});
+                        Toast("Success");
+                    }
+                }
+                catch(E){
+                    alert(E.toString()+response);
+                }
+            })
+        });
+
+        input.click();
+    }
+
     useEffect(()=>{
         let empty = [];
         for (let k in data){
@@ -1425,9 +1484,17 @@ function Settings(){
                     <h1>&nbsp;</h1>
 
                     <Typography>Update System Values</Typography>
+                    <Box sx={{py:3}} className="w3-center">
+                        <img src={"../uploads/"+data.logo} width={"120"} className="rounded" />
+                        <br/>
+                        <br/>
+                        <Button variant="outlined" size="small" sx={{textTransform:"none"}} onClick={e=>uploadPicture('logo')}>Choose Picture</Button>
+                    </Box>
                     <form onSubmit={saveData}>
                         <input type="hidden" name="updateSettings" value={"true"} />
-                        {keys.map((row,index)=>(
+                        {keys
+                        .filter(r=>r.name != "logo")
+                        .map((row,index)=>(
                             <div className="">
                                 <TextField 
                                     fullWidth 
@@ -1528,4 +1595,37 @@ function Subjects(){
             </Dialog>
         </>
     )
+}
+
+function post(url, formdata, callback){
+    var ajax = new XMLHttpRequest();
+
+    var completeHandler = function(event) {
+        const contentType = ajax.getResponseHeader("Content-Type");
+        console.log(contentType);
+        if (contentType == "application/json") {
+            try{
+                callback(JSON.parse(event.target.responseText));
+            }
+            catch(E){
+                console.error(E.toString());
+                console.error("Failed to parse: "+event.target.responseText);
+            }
+        }
+        else{
+            var response = event.target.responseText;
+            callback(response);
+        }
+    }
+    
+    var progressHandler = function(event) {
+        //try{return obj.progress(event.loaded, event.total);}catch(E){}
+    }
+    
+    ajax.upload.addEventListener("progress", progressHandler, false);
+    ajax.addEventListener("load", completeHandler, false);
+    //ajax.addEventListener("error", errorHandler, false);
+    //ajax.addEventListener("abort", abortHandler, false);
+    ajax.open("POST", url);
+    ajax.send(formdata);
 }

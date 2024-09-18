@@ -3,7 +3,7 @@ const {TextField,Button,Alert,ListItem,ListItemButton,ListItemIcon,ListItemText,
     TableRow,Tabs, Tab,Box,Chip,
     TableCell,TablePagination,Drawer,Link,MenuItem,Dialog,Input,
     TableBody, Card,CardHeader,Avatar,IconButton,
-    InputBase,CardContent
+    InputBase,CardContent,FormControlLabel,Checkbox
 } = MaterialUI;
 const {useState,useEffect,useContext,createContext} = React;
 
@@ -51,6 +51,15 @@ let theme = createTheme({
                     borderRadius:"16px"
                 }
             }
+        },
+        MuiOutlinedInput: {
+            styleOverrides: {
+                root: {
+                    '& .MuiOutlinedInput-notchedOutline': {
+                        borderRadius: '8px',
+                    },
+                },
+            },
         },
     }
 });
@@ -103,6 +112,10 @@ function Index(){
         {
             title:"Home",
             icon:"fa fa-home"
+        },
+        {
+            title:"Registration",
+            icon:"fa fa-list-ol"
         },
         {
             title:"Resources",
@@ -168,7 +181,7 @@ function Index(){
                             <i className="fa fa-bars w3-large w3-text-white"/>
                         </Fab>
                         <span className="pl-5">
-                            <span className="pt-1">
+                            <span className="pt-1 text-lg">
                                 Payefo
                             </span>
                         </span>
@@ -183,6 +196,7 @@ function Index(){
                         page == "System Values" ? <SystemValues />:
                         page == "Lessons" ? <AvailableLessons />:
                         page == "Lesson" ? <Lesson />:
+                        page == "Registration" ? <Registration />:
                         <>{page}</>}
                     </div>
                 </div>
@@ -239,17 +253,17 @@ function Home(){
     });
     const [method,setMethod] = useState(0);
     const [methods,setMethods] = useState([
-        {
+        /*{
             id:1,
             title:"VISA",
             icon:"fab fa-cc-visa",
             description:"You will subscribe for 3 months"
-        },
+        },*/
         {
             id:2,
-            title:"Paypal",
+            title:"Airtel Money or Mpamba",
             icon:"fab fa-cc-paypal",
-            description:"You will subscribe for 3 months"
+            description:"We will redirect to paychangu. Follow the steps"
         },
         {
             id:3,
@@ -280,6 +294,34 @@ function Home(){
         return new Intl.NumberFormat().format(num);
     }
 
+    const makePayment = () => {
+        let random = Math.floor((Math.random() * 1000000000) + 1);
+        $.post("api/", {saveRef:random,type:"fees",package:active.id}, res=>{
+            PaychanguCheckout({
+                "public_key": "pub-live-AkdzhBXueOLvshxcT4icXi8xg9L1WhMB",
+                "tx_ref": '' + random,
+                "amount": active.price,
+                "currency": "MWK",
+                //"callback_url": "https://malawi-schools.com/payefo/success-changu.php",
+                "callback_url": "https://localhost/payefo/success-changu.php",
+                "return_url": "https://example.com/returnurl",
+                "customer":{
+                    "email": "yourmail@example.com",
+                    "first_name":"Mac",
+                    "last_name":"Phiri",
+                },
+                "customization": {
+                    "title": "Registration Payment",
+                    "description": "First payment to register",
+                },
+                "meta": {
+                    "uuid": "uuid",
+                    "response": "Response"
+                }
+            });
+        });
+    }
+
     useEffect(()=>{
         getData();
         getPackages();
@@ -296,7 +338,7 @@ function Home(){
             <div className="w3-row">
                 <div className="w3-half p-2">
                     {subscriptions.map((row,index)=>(
-                        <Paper sx={{p:3,borderRadius:"24px"}}>
+                        <Paper sx={{p:3,borderRadius:"24px",mt:2}}>
                             <div className="clearfix py-2">
                                 <font>{row.package_data.name}</font> | 
                                 <Typography variant="body2" color="text.secondary" sx={{px:3,display:"inline-block"}}>{row.package_data.duration} months</Typography> | 
@@ -404,7 +446,7 @@ function Home(){
             </div>
 
             <Dialog open={open.method} onClose={()=>setOpen({...open, method:false})}>
-                <div className="p-3" style={{maxWidth:"450px"}}>
+                <div className="p-3" style={{width:(innerWidth*.85)+"px"}}>
                     <CloseHeading label="Payment Method" onClose={()=>setOpen({...open, method:false})}/>
                     <div className="my-3">
                         {methods.map((row,index)=>(
@@ -425,11 +467,14 @@ function Home(){
                         ))}
 
                         {method != 0 && <Button variant="outlined" onClick={e=>{
-                            if(method != 3){
-                                Toast("Not implemented yet");
+                            if(method == 2){
+                                makePayment();
+                            }
+                            else if(method == 3){
+                                setOpen({...open, method:false, confirm:true});
                             }
                             else{
-                                setOpen({...open, method:false, confirm:true});
+                                Toast("Not implemented yet");
                             }
                         }}>
                             Continue
@@ -651,7 +696,9 @@ function Resources(){
             <div className="p-3">
                 <div className="w3-responsive">
                     <div className="py-2 flex gap-1">
-                        {subjects.map((row,index)=>(
+                        {subjects
+                        .filter(r=>(r.id == 0 || r.checked))
+                        .map((row,index)=>(
                             <Chip label={row.name} variant={row.id != subject ? "outlined":"contained"} onClick={e=>setSubject(row.id)} color="primary" sx={{ml:1}} />
                         ))}
                     </div>
@@ -782,7 +829,9 @@ function AvailableLessons(){
                             value={form.subject}
                             onChange={e=>setForm({...form, subject:e.target.value})}
                             name="subject_lessons">
-                            {subjects.map((row,index)=>(
+                            {subjects
+                            .filter(r=>(r.id == 0 || r.checked))
+                            .map((row,index)=>(
                                 <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
                             ))}
                         </TextField>
@@ -1146,6 +1195,92 @@ function CommentView2(props){
                         ))}
                     </div>
                 </>}
+            </div>
+        </>
+    )
+}
+
+function Registration(){
+    const [subjects,setSubjects] = useState([]);
+    const [data,setData] = useState({
+        form:1,
+        subjects:JSON.stringify(subjects),
+        setRegistration:"true"
+    })
+
+    const getSubjects = () => {
+        $.get("api/", {getSubjects:"true"}, res=>setSubjects(res));
+    }
+
+    const getRegistration = () =>{
+        $.get("api/", {getRegistration:"true"}, res=>setData({...data, ...res}));
+    }
+
+    useEffect(()=>{
+        getSubjects();
+        getRegistration();
+    }, []);
+
+    useEffect(()=>{
+        if(subjects.length > 0){
+            //
+            setData({...data, subjects:JSON.stringify(subjects)});
+        }
+    }, [subjects]);
+
+    useEffect(()=>{
+        if(subjects.length > 0){
+            $.post("api/", data, response=>{
+                try{
+                    let res = JSON.parse(response)
+                    if(res.status){
+                        //Toast("Success");
+                    }
+                }
+                catch(E){
+                    alert(E.toString()+response);
+                }
+            })
+        }
+    }, [data])
+
+    return (
+        <>
+            <div className="w3-row">
+                <div className="w3-col m3">&nbsp;</div>
+                <div className="w3-col m6 p-2">
+                    <Typography variant="h4" sx={{py:3}}>Registration</Typography>
+                    <TextField
+                        label="Form"
+                        fullWidth
+                        select
+                        value={data.form}
+                        onChange={e=>setData({...data, form:e.target.value})}
+                        size="small">
+                        {[1,2,3,4].map((row,index)=>(
+                            <MenuItem value={row}>{row}</MenuItem>
+                        ))}
+                    </TextField>
+                    
+                    <Alert severity="info" sx={{my:3}}>Tick the subjects you want to register</Alert>
+
+                    {subjects
+                    .filter(r=>r.id != 0)
+                    .map((row,index)=>(
+                        <div>
+                            <FormControlLabel size="small" fullWidth control={
+                                <Checkbox size="small" checked={row.checked} onChange={(e)=>{
+                                    setSubjects(subjects.map(r=>{
+                                        if(r.id == row.id){
+                                            r.checked = e.target.checked
+                                        }
+                                        return r;
+                                    }))
+                                }} />
+                            } label={row.name} />
+                        </div>
+                    ))}
+                </div>
             </div>
         </>
     )

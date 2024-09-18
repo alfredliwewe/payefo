@@ -3,7 +3,7 @@ const {TextField,Button,Alert,ListItem,ListItemButton,ListItemIcon,ListItemText,
     TableRow,Tabs, Tab,Box,Chip,Typography, FormLabel,Rating,DialogTitle,DialogActions,DialogContent,DialogContentText,
     TableCell,TablePagination,Drawer,Link,MenuItem,Dialog,Input,
     TableBody,Fab, Card,CardHeader,Avatar,IconButton,
-    InputBase,CardContent
+    InputBase,CardContent,FormControlLabel,Checkbox
 } = MaterialUI;
 const {useState,useEffect,useContext,createContext} = React;
 
@@ -54,6 +54,15 @@ let theme = createTheme({
                 }
             }
         },
+        MuiOutlinedInput: {
+            styleOverrides: {
+                root: {
+                    '& .MuiOutlinedInput-notchedOutline': {
+                        borderRadius: '8px',
+                    },
+                },
+            },
+        },
     }
 });
 
@@ -102,6 +111,10 @@ function Index(){
         {
             title:"Home",
             icon:"fa fa-home"
+        },
+        {
+            title:"Registration",
+            icon:"fa fa-list-ol"
         },
         {
             title:"Resources",
@@ -158,6 +171,7 @@ function Index(){
                     page == "Lesson" ? <Lesson />:
                     page == "System Values" ? <Settings />:
                     page == "Profile" ? <Profile />:
+                    page == "Registration" ? <Registration />:
                     <>{page}</>}
                 </div>
             </div>
@@ -785,6 +799,92 @@ function TabPanel(props) {
     );
 }
 
+function Registration(){
+    const [subjects,setSubjects] = useState([]);
+    const [data,setData] = useState({
+        form:1,
+        subjects:JSON.stringify(subjects),
+        setRegistration:"true"
+    })
+
+    const getSubjects = () => {
+        $.get("api/", {getSubjects:"true"}, res=>setSubjects(res));
+    }
+
+    const getRegistration = () =>{
+        $.get("api/", {getRegistration:"true"}, res=>setData({...data, ...res}));
+    }
+
+    useEffect(()=>{
+        getSubjects();
+        getRegistration();
+    }, []);
+
+    useEffect(()=>{
+        if(subjects.length > 0){
+            //
+            setData({...data, subjects:JSON.stringify(subjects)});
+        }
+    }, [subjects]);
+
+    useEffect(()=>{
+        if(subjects.length > 0){
+            $.post("api/", data, response=>{
+                try{
+                    let res = JSON.parse(response)
+                    if(res.status){
+                        //Toast("Success");
+                    }
+                }
+                catch(E){
+                    alert(E.toString()+response);
+                }
+            })
+        }
+    }, [data])
+
+    return (
+        <>
+            <div className="w3-row">
+                <div className="w3-col m3">&nbsp;</div>
+                <div className="w3-col m6">
+                    <Typography variant="h4" sx={{py:3}}>Registration</Typography>
+                    <TextField
+                        label="Form"
+                        fullWidth
+                        select
+                        value={data.form}
+                        onChange={e=>setData({...data, form:e.target.value})}
+                        size="small">
+                        {[1,2,3,4].map((row,index)=>(
+                            <MenuItem value={row}>{row}</MenuItem>
+                        ))}
+                    </TextField>
+                    
+                    <Alert severity="info" sx={{my:3}}>Tick the subjects you want to register</Alert>
+
+                    {subjects
+                    .filter(r=>r.id != 0)
+                    .map((row,index)=>(
+                        <div>
+                            <FormControlLabel size="small" fullWidth control={
+                                <Checkbox size="small" checked={row.checked} onChange={(e)=>{
+                                    setSubjects(subjects.map(r=>{
+                                        if(r.id == row.id){
+                                            r.checked = e.target.checked
+                                        }
+                                        return r;
+                                    }))
+                                }} />
+                            } label={row.name} />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </>
+    )
+}
+
 function Resources(){
     const [subjects,setSubjects] = useState([]);
     const [books,setBooks] = useState([]);
@@ -809,7 +909,9 @@ function Resources(){
             {hasSubscribed ?
             <div className="p-3">
                 <div className="py-2">
-                    {subjects.map((row,index)=>(
+                    {subjects
+                    .filter(r => (r.checked || r.id == 0))
+                    .map((row,index)=>(
                         <Chip label={row.name} variant={row.id != subject ? "outlined":"contained"} onClick={e=>setSubject(row.id)} color="primary" sx={{ml:1}} />
                     ))}
                 </div>
@@ -942,7 +1044,9 @@ function AvailableLessons(){
                                 value={form.subject}
                                 onChange={e=>setForm({...form, subject:e.target.value})}
                                 name="subject_lessons">
-                                {subjects.map((row,index)=>(
+                                {subjects
+                                .filter(r => (r.checked || r.id == 0))
+                                .map((row,index)=>(
                                     <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
                                 ))}
                             </TextField>

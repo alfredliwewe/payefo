@@ -81,16 +81,67 @@ elseif (isset($_GET['getPackages'])) {
 	echo json_encode($data);
 }
 elseif (isset($_GET['getSubjects'])) {
+	//get registered subjects
+	$data = getData("registration", ['student' => $_SESSION['data']['id']]) ?: ['id' => 0, 'form' => 0, 'subjects' =>''];
+
+	$subjects = explode(",", $data['subjects']);
+
 	$rows = [
-		['id'=>0,'name'=> 'All']
+		['id'=>0,'name'=> 'All','checked' => false]
 	];
 	$read = $db->query("SELECT * FROM subjects");
 	while ($row = $read->fetch_assoc()) {
+		$row['checked'] = in_array($row['id'], $subjects);
 		array_push($rows, $row);
 	}
 
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($rows);
+}
+elseif (isset($_POST['setRegistration'])) {
+	$data = getData("registration", ['student' => $_SESSION['data']['id']]);
+
+	$subjects = json_decode($_POST['subjects'], true) ?: [];
+	$selected = [];
+
+	foreach ($subjects as $row) {
+		if (isset($row['checked'])) {
+			if ($row['checked']) {
+				array_push($selected, $row['id']);
+			}
+		}
+	}
+
+	if ($data != null) {
+		db_update("registration", [
+			'subjects' => implode(",", $selected),
+			'form' => $_POST['form']
+		], ['id' => $data['id']]);
+	}
+	else{
+		db_insert("registration", [
+			'student' => $_SESSION['data']['id'],
+			'form' => $_POST['form'],
+			'subjects' => implode(",", $selected),
+		]);
+	}
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
+}
+elseif (isset($_GET['getRegistration'])) {
+	$data = getData("registration", ['student' => $_SESSION['data']['id']]) ?: ['id' => 0, 'form' => 0, 'subjects' =>''];
+
+	if ($data['subjects'] != '') {
+		$subjects = [];
+		$read = $db->query("SELECT * FROM subjects WHERE id IN ({$data['subjects']})");
+		while ($row = $read->fetch_assoc()) {
+			array_push($subjects, $row);
+		}
+		$data['subjects'] = json_encode($subjects);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($data);
 }
 elseif (isset($_GET['getUser'])) {
 

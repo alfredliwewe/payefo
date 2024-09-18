@@ -63,7 +63,7 @@ require '../db.php';
 <div id="root"></div>
 </body>
 <?php 
-if (isset($_SESSION['user_id'])) {
+if (isset($_SESSION['admin_id'])) {
 	if (strpos(strtolower($_SERVER['HTTP_USER_AGENT']), "android") OR strpos(strtolower($_SERVER['HTTP_USER_AGENT']), "iphone")) {
 		$files = [
 			'jsx/mobile.jsx',
