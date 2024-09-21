@@ -191,7 +191,7 @@ elseif(isset($_POST['subject_lessons'], $_POST['form'])){
 
 	$rows = [];
 
-	$read = $db->query("SELECT * FROM lessons WHERE form = '$form' AND subject = '$subject' ORDER BY id DESC");
+	$read = $db->query("SELECT * FROM lessons WHERE form = '$form' AND subject = '$subject' AND active_from >= $time AND active_to <= $time ORDER BY id DESC");
 	while ($row = $read->fetch_assoc()) {
 		$row['admin_data'] = $admins[$row['teacher']];
 		$row['subject_data'] = $subjects[$row['subject']];

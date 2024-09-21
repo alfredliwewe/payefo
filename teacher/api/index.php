@@ -84,11 +84,22 @@ elseif(isset($_POST['subject_lessons'], $_POST['form'])){
 		$row['opened'] = (int)$db->query("SELECT COUNT(id) FROM progress WHERE ref = '{$row['id']}' AND type = 'lesson' ")->fetch_array()[0];
 		$row['attended'] = $db->query("SELECT DISTINCT student FROM progress WHERE ref = '{$row['id']}' AND type = 'lesson' ")->num_rows;
 		$row['attachments'] = getAll("attachments", ['ref' => $row['id'], 'type' => 'lesson']);
+
+		$row['start_active_day'] = date('Y-m-d', $row['active_from']);
+		$row['end_active_day'] = date('Y-m-d', $row['active_to']);
 		array_push($rows, $row);
 	}
 
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($rows);
+}
+elseif(isset($_POST['lesson_id'], $_POST['start_date'], $_POST['end_date'])){
+	db_update("lessons", [
+		'active_from' => strtotime($_POST['start_date']),
+		'active_to' => strtotime($_POST['end_date']." 23:59"),
+	], ['id' => $_POST['lesson_id']]);
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
 }
 elseif(isset($_POST['lesson_id'], $_POST['new_comment'])){
 	db_insert("comments", [
@@ -281,6 +292,8 @@ elseif(isset($_POST['subject'], $_POST['form'], $_POST['new_lesson_title'], $_PO
 		'subject' => $_POST['subject'],
 		'form' => $_POST['form'],
 		'date_added' => $time,
+		'active_from' => $time,
+		'active_to' => $time + (24*7*3600)
 	]);
 
 	for ($i=0; $i < $_POST['attachments']; $i++) { 
@@ -294,6 +307,21 @@ elseif(isset($_POST['subject'], $_POST['form'], $_POST['new_lesson_title'], $_PO
 			'type' => 'lesson',
 		]);
 	}
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
+}
+elseif(isset($_POST['deleteLesson'], $_POST['id'])){
+	$attachments = getAll("attachments", ['ref' => $_POST['id'], 'type' => 'lesson']);
+
+	foreach ($attachments as $row) {
+		if (file_exists("../../uploads/".$row['filename'])) {
+			unlink("../../uploads/".$row['filename']);
+		}
+	}
+
+	db_delete("attachments", ['ref' => $_POST['id'], 'type' => 'lesson']);
+
+	db_delete("lessons", ['id' => $_POST['id']]);
 
 	echo json_encode(['status' => true, 'message' => "Success"]);
 }

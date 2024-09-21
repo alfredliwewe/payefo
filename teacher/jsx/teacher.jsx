@@ -3,7 +3,7 @@ const {TextField,Button,Alert,ListItem,ListItemButton,ListItemIcon,ListItemText,
     TableRow,Tabs, Tab,Box,Chip,Typography, FormLabel,Rating,DialogTitle,DialogActions,DialogContent,DialogContentText,
     TableCell,TablePagination,Drawer,Link,MenuItem,Dialog,Input,
     TableBody,Fab, Card,IconButton,InputBase,
-    CardHeader,Avatar,
+    CardHeader,Avatar,Menu,
     CardContent
 } = MaterialUI;
 const {useState,useEffect,useContext,createContext} = React;
@@ -11,6 +11,11 @@ const {useState,useEffect,useContext,createContext} = React;
 const Context = createContext({});
 
 const { red } = MaterialUI.colors;
+
+//make the todays date
+const now = moment();
+const today = now.format('YYYY-MM-DD');
+const first_day = now.format('YYYY-MM-')+"01";
 
 var format = new Intl.NumberFormat();
 
@@ -1058,7 +1063,7 @@ function AvailableLessons(){
             <div className="w3-row">
                 <div className="w3-col m2">&nbsp;</div>
                 <div className="w3-col m8 pt-4">
-                    <form onSubmit={filterRecords} className="py-2">
+                    <form onSubmit={filterRecords} className="py-2" id="filterRecords">
                         <TextField 
                             label="Subject" 
                             sx={{width:180}} 
@@ -1074,7 +1079,7 @@ function AvailableLessons(){
 
                         <TextField 
                             label="Form" 
-                            sx={{width:180,mx:2}} 
+                            sx={{width:120,ml:2}} 
                             size="small" 
                             select 
                             value={form.form}
@@ -1085,13 +1090,34 @@ function AvailableLessons(){
                             ))}
                         </TextField>
 
+                        <TextField 
+                            label="Create date from" 
+                            sx={{width:160,ml:2}} 
+                            size="small" 
+                            type="date" 
+                            defaultValue={first_day}
+                            name="start_date"/>
+
+                        <TextField 
+                            label="End date" 
+                            sx={{width:160,mx:2}} 
+                            size="small" 
+                            type="date" 
+                            defaultValue={today}
+                            name="end_date"/>
+
                         <Button variant="outlined" type="submit">Submit</Button>
                     </form>
 
                     <Divider/>
 
                     {rows.map((row,index)=>(
-                        <LessonView data={row} key={row.id}/>
+                        <LessonView data={row} key={row.id} onRefresh={()=>{
+                            filterRecords({
+                                preventDefault:()=>{},
+                                target:document.getElementById("filterRecords")
+                            });
+                        }}/>
                     ))}
 
                     {rows.length == 0 && <Alert severity="error">No lessons available for this selection</Alert>}
@@ -1104,10 +1130,48 @@ function AvailableLessons(){
 function LessonView(props){
     const [data,setData] = useState(props.data);
     const {page,setPage} = useContext(Context);
+    const [open,setOpen] = useState({
+        edit:false,
+        delete:false,
+        dates:false
+    });
 
     useEffect(()=>{
         setData(props.data);
     }, [props.data]);
+
+    const listenMenu = (type) => {
+        switch(type){
+            case "delete":
+                setOpen({...open, delete:true});
+                break;
+
+            case "dates":
+                setOpen({...open, dates:true});
+                break;
+        }
+    }
+
+    const saveDates = (event) => {
+        event.preventDefault();
+
+        $.post("api/", $(event.target).serialize(), response=>{
+            try{
+                let res = JSON.parse(response);
+                if(res.status){
+                    Toast(res.message)
+                    setOpen({...open, dates:false});
+                    props.onRefresh();
+                }
+                else{
+                    Toast(res.message)
+                }
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
 
     return (
         <>
@@ -1118,9 +1182,7 @@ function LessonView(props){
                             <Avatar sx={{ bgcolor: red[500] }} aria-label="recipe">R</Avatar>
                         }
                         action={
-                            <Fab size="small" sx={{boxShadow:"none"}}>
-                                <i className="far fa-bookmark text-lg"/>
-                            </Fab>
+                            <BasicMenu onMenuClick={listenMenu} />
                         }
                         title={props.data.admin_data.name}
                         subheader={"teacher - "+props.data.ago}
@@ -1144,9 +1206,110 @@ function LessonView(props){
                     </CardContent>
                 </Card>
             </div>
+
+            {open.delete && <Warning
+                title="Delete lesson"
+                secondaryText={"Are you sure you want to delete this lesson ?"}
+                action={{
+                    text:"Confirm",
+                    callback:()=>{
+                        $.post("api/", {deleteLesson:"true",id:data.id}, response=>{
+                            try{
+                                let res = JSON.parse(response);
+                                if(res.status){
+                                    setOpen({...open, delete:false});
+                                    props.onRefresh();
+                                    Toast("Success");
+                                }
+                                else{
+                                    Toast(res.message);
+                                }
+                            }
+                            catch(E){
+                                alert(E.toString()+response);
+                            }
+                        })
+                    }
+                }}
+                onClose={()=>setOpen({...open, delete:false})}
+            />}
+
+            <Dialog open={open.dates} onClose={()=>setOpen({...open, dates:false})}>
+                <div className="p-3" style={{width:"400px"}}>
+                    <CloseHeading label="Change dates" onClose={()=>setOpen({...open, dates:false})}/>
+                    <form onSubmit={saveDates} >
+                        <input type="hidden" name="lesson_id" value={data.id} />
+
+                        <TextField 
+                            label="Start date" 
+                            type="date"
+                            value={data.start_active_day}
+                            onChange={e=>setData({...data, start_active_day:e.target.value})}
+                            name="start_date"
+                            size="small"
+                            sx={{mt:2}}
+                            fullWidth />
+
+                        <TextField 
+                            label="Start date" 
+                            type="date"
+                            value={data.end_active_day}
+                            onChange={e=>setData({...data, end_active_day:e.target.value})}
+                            size="small"
+                            name="end_date"
+                            sx={{mt:2,mb:3}}
+                            fullWidth />
+
+                        <Button type="submit">Save Changes</Button>
+                    </form>
+
+                    <BottomClose onClose={()=>setOpen({...open, dates:false})}/>
+                </div>
+            </Dialog>
         </>
     )
 }
+
+function BasicMenu(props) {
+    const [anchorEl, setAnchorEl] = React.useState(null);
+    const open = Boolean(anchorEl);
+
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = (type) => {
+        setAnchorEl(null);
+        props.onMenuClick(type);
+    };
+  
+    return (
+        <div>
+            <Fab size="small" sx={{boxShadow:"none"}}
+                id="basic-button"
+                aria-controls={open ? 'basic-menu' : undefined}
+                aria-haspopup="true"
+                aria-expanded={open ? 'true' : undefined}
+                onClick={handleClick}
+                >
+                <i className="fa fa-ellipsis text-lg"/>
+            </Fab>
+            <Menu
+                id="basic-menu"
+                anchorEl={anchorEl}
+                open={open}
+                onClose={handleClose}
+                MenuListProps={{
+                'aria-labelledby': 'basic-button',
+                }}
+                >
+                <MenuItem onClick={()=>handleClose("edit")}>Edit lesson</MenuItem>
+                <MenuItem onClick={()=>handleClose("dates")}>Change active dates</MenuItem>
+                <MenuItem onClick={()=>handleClose("delete")} color="error">Delete</MenuItem>
+            </Menu>
+        </div>
+    );
+  }
 
 function Lesson(){
     const [data,setData] = useStorage('lesson', {id:0});
