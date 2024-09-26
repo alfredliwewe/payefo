@@ -38,6 +38,79 @@ elseif (isset($_GET['getUser'])) {
 		'id' => $_SESSION['data']['id']
 	]));
 }
+elseif (isset($_GET['getQuestions'])) {
+	$rows = getAll("questions", ['exam' => $_GET['getQuestions']]);
+
+	for ($i=0; $i < count($rows); $i++) { 
+		$rows[$i]['options'] = getAll("options", ['question' => $rows[$i]['id']]);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
+}
+elseif (isset($_GET['getExams'])) {
+	$subjects = getAll("subjects", "id");
+	$instructors = getAll("staff", "id");
+
+	$rows = [];
+	$rquery = $db->query("SELECT * FROM `exams`");
+	while ($row = $rquery->fetch_assoc()) {
+		$row['subject_data'] = $subjects[$row['subject']];
+		$row['instructor_data'] = $instructors[$row['instructor_id']];
+		$questions = getAll("questions", ['exam' => $row['id']]);
+
+		for ($i=0; $i < count($questions); $i++) { 
+			$questions[$i]['options'] = getAll("options", ['question' => $questions[$i]['id']]);
+		}
+
+		$row['questions'] = $questions;
+
+		array_push($rows, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
+}
+elseif(isset($_POST['exam_id'], $_POST['question_stmt'], $_POST['numOptions'])){
+	//save exam
+	$insert_id = db_insert("questions",[
+		'exam' => $_POST['exam_id'],
+		'question' => $_POST['question_stmt'],
+		'attachment' => "",
+	]);
+
+	for ($i=0; $i < (int)$_POST['numOptions']; $i++) { 
+
+		db_insert("options", [
+			'question' => $insert_id,
+			'label' => $_POST['label'.$i],
+			'value' => $_POST['value'.$i],
+			'type' => (int)$_POST['correct'] == $i ? "correct" : 'wrong',
+		]);
+	}
+
+	$options = getAll("options", ['question' =>$insert_id]);
+
+	echo json_encode([
+		'status' => true, 
+		'message' => "Added",
+		//'stmt' => $_POST['question_stmt'],
+		//'options' => $options
+	]);
+}
+elseif(isset($_POST['exam_name'], $_POST['course_id'], $_POST['form'], $_POST['term'])){
+	db_insert("exams", [
+		'form' => $_POST['form'],
+		'term' => $_POST['term'],
+		'subject' => $_POST['course_id'],
+		'title' => $_POST['exam_name'],
+		'instructor_id' => $_SESSION['user_id'],
+		'created_at' => $time,
+		'status' => 'active',
+	]);
+
+	echo json_encode(['status' => true, 'message' => "Added"]);
+}
 elseif (isset($_FILES['change_picture'])) {
 	$filename = $_FILES['change_picture']['name'];
 

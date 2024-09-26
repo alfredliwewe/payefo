@@ -41,6 +41,15 @@ function getAll($table, $ref=null){
 
 		return $rows;
 	}
+	elseif(is_string($ref)){
+		$read = $db->query("SELECT * FROM `$table` ");
+		$rows = [];
+		while ($row = $read->fetch_assoc()) {
+			$rows[$row[$ref]] = $row;
+		}
+
+		return $rows;
+	}
 	else{
 		$wheres = [];
 

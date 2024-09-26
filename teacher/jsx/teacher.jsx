@@ -169,6 +169,7 @@ function Index(){
                     page == "Lesson" ? <Lesson />:
                     page == "Profile" ? <Profile />:
                     page == "System Values" ? <Settings />:
+                    page == "Tests" ? <Exams />:
                     <>{page}</>}
                 </div>
             </div>
@@ -1578,6 +1579,276 @@ function CommentView2(props){
                         ))}
                     </div>
                 </>}
+            </div>
+        </>
+    )
+}
+
+function Exams(){
+    const [rows,setRows] = useState([]);
+    const [courses,setCourses] = useState([]);
+    const [search,setSearch] = useState("");
+    const [stage,setStage] = useState("table");
+    const [active,setActive] = useState({});
+    
+    const [open,setOpen] = useState({
+        add:false,
+        block:false
+    })
+
+    const getRows = () => {
+        $.get("api/", {getExams:"true"}, res=>setRows(res));
+        $.get("api/", {getSubjects:"true"}, res=>setCourses(res));
+    }
+
+    const save = (event) =>{
+        event.preventDefault();
+
+        $.post("api/", $(event.target).serialize(), response=>{
+            try{
+                let res = JSON.parse(response);
+                if(res.status){
+                    setOpen({...open, add:false});
+                    getRows();
+                    Toast("Success");
+                }
+                else{
+                    Toast(res.message);
+                }
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
+
+    useEffect(()=>{
+        getRows();
+    }, []);
+
+    return (
+        <>
+            {stage == "table" ? <>
+                <div className="p-2">
+                    <Box sx={{pb:2}}>
+                        <Button onClick={e=>setOpen({...open, add:true})}>Add Exam</Button>
+                    </Box>
+                    <Input type="search" value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search table.." />
+                    <Table>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>#</TableCell>
+                                <TableCell>Exam Name</TableCell>
+                                <TableCell>Form</TableCell>
+                                <TableCell>Term</TableCell>
+                                <TableCell>Instructor</TableCell>
+                                <TableCell>Questions</TableCell>
+                                <TableCell>Status</TableCell>
+                                <TableCell>Action</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {rows.map((row,index)=>(
+                                <TableRow hover key={row.student_id} sx={{background:(index % 2 == 0 ? "rgba(0, 0, 0, 0.04)":"#fff")}}>
+                                    <TableCell padding="none" sx={{pl:1}}>{index+1}</TableCell>
+                                    <TableCell padding="none">{row.title}</TableCell>
+                                    <TableCell padding="none">{row.form}</TableCell>
+                                    <TableCell padding="none">{row.term}</TableCell>
+                                    <TableCell padding="none">{row.instructor_data.name}</TableCell>
+                                    <TableCell padding="none">
+                                        <Button sx={styles.smallBtn} variant="outlined" onClick={e=>{
+                                            setActive(row);
+                                            setStage("Questions");
+                                        }}>{row.questions.length} - Manage</Button>
+                                    </TableCell>
+                                    <TableCell padding="none">{row.status}</TableCell>
+                                    <TableCell sx={{p:1}}>
+                                        <Button sx={styles.smallBtn} color="error" variant="outlined">Edit</Button>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </div>
+
+                <Dialog open={open.add} onClose={()=>setOpen({...open, add:false})}>
+                    <div className="w3-padding-large" style={{width:"400px"}}>
+                        <CloseHeading label="Add new exam" onClose={()=>setOpen({...open, add:false})} />
+
+                        <form onSubmit={save} id="new_delegate_form" method="post">
+                            <TextField label="Exam Name" fullWidth size="small" sx={{mt:2}} type="text" name="exam_name" />
+                            
+                            <TextField label="Course/Subject" fullWidth size="small" sx={{mt:2}} select name="course_id">
+                                {courses.map((row,index)=>(
+                                    <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
+                                ))}
+                            </TextField>
+                            
+                            <TextField label="Form" fullWidth size="small" sx={{mt:2}} select name="form">
+                                {[1,2,3,4].map((row,index)=>(
+                                    <MenuItem value={row} key={row}>{row}</MenuItem>
+                                ))}
+                            </TextField>
+
+                            <TextField label="Term" fullWidth size="small" sx={{mt:2,mb:3}} select name="term">
+                                {[1,2,3].map((row,index)=>(
+                                    <MenuItem value={row} key={row}>{row}</MenuItem>
+                                ))}
+                            </TextField>
+
+                            <Button type="submit">Submit</Button>
+                        </form>
+
+                        <BottomClose onClose={()=>setOpen({...open, add:false})} />
+                    </div>
+                </Dialog>
+            </>:
+            stage == "Questions" ? <>
+                <Questions data={active} onRefresh={()=>{
+                    setStage("table");
+                    getRows();
+                }} />
+            </>:
+            <>{stage}</>}
+        </>
+    )
+}
+
+function Questions(props){
+    const [rows,setRows] = useState(props.data.questions);
+    const [numOptions,setNumOptions] = useState([1,2,3,4]);
+    const [attachments,setAttachments] = useState([]);
+    const [files,setFiles] = useState([]);
+    const [alphabet] = useState(["A","B","C","D","E","F","G"]);
+    const [responseObject,setResponseObject] = useState({});
+
+    const [open,setOpen] = useState({
+        correct:false
+    });
+
+    const getRows = () => {
+        $.get("api/", {getQuestions:props.data.id}, res=>setRows(res));
+    }
+
+    const saveData = (event) => {
+        event.preventDefault();
+
+        //alert($(event.target).serialize());
+
+        $.post("api/", $(event.target).serialize(), response=>{
+            try{
+                let res = JSON.parse(response);
+                Toast("Success")
+                event.target.reset();
+                getRows();
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
+
+    const chooseFiles = () => {
+        let input = document.createElement("input");
+        input.type = 'file';
+        input.multiple = 'multiple'
+        input.addEventListener('change', function(e){
+            let files = [], pure_files = [];
+            for (let i = 0; i<input.files.length; i++){
+                let file = input.files[i];
+                pure_files.push(file);
+
+                file.src = URL.createObjectURL(file);
+                file.typeFile = fileType(file.name)
+                files.push(file)
+            }
+
+            setAttachments(files);
+            setFiles(pure_files);
+        });
+
+        input.click();
+    }
+
+    useEffect(()=>{
+        setRows(props.data.questions);
+    }, [props.data.questions]);
+
+    return (
+        <>
+            <div className="p-2">
+                <Box sx={{pb:2}}>
+                    <Button onClick={()=>props.onRefresh()}>Go back</Button>
+                </Box>
+
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>#</TableCell>
+                            <TableCell>Question</TableCell>
+                            <TableCell>Attachment</TableCell>
+                            <TableCell>Options</TableCell>
+                            <TableCell>Action</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {rows.map((row,index)=>(
+                            <TableRow hover key={row.id} sx={{background:(index % 2 == 0 ? "rgba(0, 0, 0, 0.04)":"#fff")}}>
+                                <TableCell padding="none" sx={{pl:2}}>{index+1}</TableCell>
+                                <TableCell padding="none">{row.question}</TableCell>
+                                <TableCell padding="none">{row.attachment}</TableCell>
+                                <TableCell padding="none">
+                                    <Chip label={row.options.length+" - Manage"} size="small" variant="outlined"/>
+                                </TableCell>
+                                <TableCell sx={{p:1}}>
+                                    <Link href="#">Edit</Link>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+
+                <Paper sx={{my:3,width:700,borderRadius:"24px"}}>
+                    <div className="p-3">
+                        <Typography variant="h4">Add Question</Typography>
+
+                        <form onSubmit={saveData}>
+                            <input type="hidden" value={props.data.id} name="exam_id"/>
+                            <TextField label="Question statement" name="question_stmt" sx={{mb:3,mt:2}} fullWidth size="small" multiline rows={3} />
+                            <Button variant="outlined" onClick={chooseFiles}><i className="fa fa-paperclip mr-2"/> Attach image</Button>
+                            <Box sx={{my:2}}>
+                                {attachments.map((row,index)=>(
+                                    <>{row.typeFile == "img" ? <>
+                                        <img src={row.src} width={"100%"} className="rounded"/>
+                                    </>:
+                                    <>
+                                        <video width={"100%"} controls>
+                                            <source src={row.src} type="video/mp4"/>
+                                        </video>
+                                    </>}</>
+                                ))}
+                            </Box>
+                            {numOptions.map((row,index)=>(
+                                <div className="w3-row pb-2">
+                                    <div className="w3-col m1">
+                                        <input type="radio" name="correct" value={index}/>
+                                    </div>
+                                    <div className="w3-col m2">
+                                        <TextField label="Label" name={"label"+index} fullWidth defaultValue={alphabet[index]} size="small" />
+                                    </div>
+                                    <div className="w3-col m9 px-2">
+                                        <TextField label="Answer" name={"value"+index} fullWidth multiline rows={2} size="small" />
+                                    </div>
+                                </div>
+                            ))}
+                            <input type="hidden" value={numOptions.length} name="numOptions"/>
+
+                            <Box sx={{py:2}}>
+                                <Button type="submit">Save</Button>
+                            </Box>
+                        </form>
+                    </div>
+                </Paper>
             </div>
         </>
     )

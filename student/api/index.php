@@ -6,7 +6,8 @@ require '../../functions.php';
 require '../../includes/String.php';
 $time = time();
 
-$student_id = $_SESSION['student_id'];
+//$student_id = $_SESSION['student_id'];
+$student_id = 1;
 
 if (isset($_GET['getSettings2'])) {
 	$data = [];
@@ -49,6 +50,36 @@ elseif (isset($_GET['getAttachments'])) {
 	echo json_encode($rows);
 }
 
+elseif (isset($_GET['getExamHistory'])) {
+	$rows_all = array_reverse(getAll("response_summary", ['student' => $_SESSION['student_id']]));
+	$rows = [];
+
+	foreach ($rows_all as $i => $row) { 
+		$row['exam_data'] = getData("exams", ['id' => $row['exam']]);
+		$row['course_data'] = getData("subjects", ['id' => $row['exam_data']['subject']]);
+		$row['created_at'] = date('d-M-Y H:i A', $row['created_at']);
+		array_push($rows, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
+}
+elseif (isset($_GET['getExamProgress'])) {
+	$exam_id = (int)$_GET['getExamProgress'];
+
+	$rows = getAll("response_progress", ['ref' => $exam_id]);
+
+	foreach ($rows as $i => $row) {
+		$row['question_data'] = getData("questions", ['id' => $row['question']]);
+		$row['options'] = getAll("options", ['question' => $row['question']]);
+
+		$rows[$i] = $row;
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
+}
+
 elseif (isset($_POST['addSubscription'], $_POST['id'])) {
 	$user_id = $_SESSION['student_id'];
 	$package_data = getData("packages", ['id' => $_POST['id']]);
@@ -66,6 +97,110 @@ elseif (isset($_POST['addSubscription'], $_POST['id'])) {
 	]);
 
 	echo json_encode(['status' => true, 'message' => "Added"]);
+}
+elseif(isset($_POST['subject_exams'], $_POST['form'])){
+	$subject = (int)$_POST['subject_exams'];
+	$form = (int)$_POST['form'];
+	$term = (int)$_POST['term'];
+
+	$subjects = [];
+	$read = $db->query("SELECT * FROM subjects");
+	while ($row = $read->fetch_assoc()) {
+		$subjects[$row['id']] = $row;
+	}
+
+	$admins = [];
+	$read = $db->query("SELECT * FROM staff");
+	while ($row = $read->fetch_assoc()) {
+		$admins[$row['id']] = $row;
+	}
+
+	$rows = [];
+
+	$read = $db->query("SELECT * FROM exams WHERE form = '$form' AND subject = '$subject' AND term = '$term' ORDER BY id DESC");
+	while ($row = $read->fetch_assoc()) {
+		$row['admin_data'] = $admins[$row['instructor_id']];
+		$row['subject_data'] = $subjects[$row['subject']];
+		$row['date'] = date('d-M-Y', $row['created_at']);
+
+		$row['ago'] = time_ago($row['created_at']);
+		array_push($rows, $row);
+	}
+
+	header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
+}
+elseif (isset($_POST['exam_id_answers'])) {
+	$exam_data = getData("exams", ['id' => $_POST['exam_id_answers']]);
+
+	$rows = getAll("questions", ['exam' => $_POST['exam_id_answers']]);
+	$questions = [];
+
+	$wrote = 0;
+	$pass = 0;
+
+	$ref = db_insert("response_summary", [
+		'exam' => $exam_data['id'],
+		'student' => $_SESSION['student_id'],
+		'all_questions' => count($rows),
+		'wrote' => $wrote,
+		'pass' => 0,
+		'fail' => 0,
+		'score' => 0,
+		'created_at' => $time,
+	]);
+
+	for ($i=0; $i < count($rows); $i++) { 
+		$rows[$i]['options'] = getAll("options", ['question' => $rows[$i]['id']]);
+		$correct = 0;
+		foreach ($rows[$i]['options'] as $option) {
+			if ($option['type'] == "correct") {
+				$correct = $option['id'];
+			}
+		}
+		$rows[$i]['correct'] = $correct;
+		$questions[$rows[$i]['id']] = $rows[$i];
+
+		if (isset($_POST[$rows[$i]['id']])) {
+			$wrote += 1;
+
+			$status = $_POST[$rows[$i]['id']] == $rows[$i]['correct'] ? "pass" : "fail";
+			if ($status == "pass") {
+				$pass += 1;
+			}
+
+			//save progress
+			db_insert("response_progress",[
+				'exam' => $exam_data['id'],
+				'student' => $_SESSION['student_id'],
+				'question' => $rows[$i]['id'],
+				'answer' => $_POST[$rows[$i]['id']],
+				'correct_answer' => $rows[$i]['correct'],
+				'status' => $status,
+				'ref' => $ref,
+			]);
+		}
+	}
+
+	//update correct values
+	db_update("response_summary", [
+		'wrote' => $wrote,
+		'pass' => $pass,
+		'fail' => $wrote - $pass,
+		'score' => round(($pass/count($rows)) * 100, 2)
+	], ['id' => $ref]);
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
+}
+elseif (isset($_GET['getQuestions'])) {
+	$rows = getAll("questions", ['exam' => $_GET['getQuestions']]);
+
+	for ($i=0; $i < count($rows); $i++) { 
+		$rows[$i]['options'] = getAll("options", ['question' => $rows[$i]['id']]);
+	}
+
+	//header('Content-Type: application/json; charset=utf-8');
+	echo json_encode($rows);
 }
 elseif (isset($_GET['getPackages'])) {
 	$data = [];
@@ -359,4 +494,7 @@ elseif (isset($_GET['getBooks'])) {
 
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($rows);
+}
+else{
+	echo json_encode(['status' => false, 'message' => "No data - ".json_encode($_POST)]);
 }

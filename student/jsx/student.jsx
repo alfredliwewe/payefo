@@ -172,6 +172,8 @@ function Index(){
                     page == "System Values" ? <Settings />:
                     page == "Profile" ? <Profile />:
                     page == "Registration" ? <Registration />:
+                    page == "Tests" ? <Exams />:
+                    page == "Exam" ? <Exam />:
                     <>{page}</>}
                 </div>
             </div>
@@ -297,7 +299,7 @@ function Home(){
             <div className="w3-row">
                 <div className="w3-half p-2">
                     {subscriptions.map((row,index)=>(
-                        <Paper className="p-3">
+                        <Paper className="p-3 mt-3 w3-round-xlarge">
                             <div className="clearfix">
                                 <font>{row.package_data.name}</font> | 
                                 <Typography variant="body2" color="text.secondary" sx={{px:3,display:"inline-block"}}>{row.package_data.duration} months</Typography> | 
@@ -1448,3 +1450,385 @@ function CommentView2(props){
         </>
     )
 }
+
+// #region exams
+
+function Exams(){
+    const [value, setValue] = React.useState(0);
+
+    const handleChange = (event, newValue) => {
+        setValue(newValue);
+    };
+
+    return (
+        <>
+            <Box sx={{ width: '100%' }}>
+                <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                    <Tabs value={value} onChange={handleChange} aria-label="basic tabs example" sx={{minHeight:"unset"}}>
+                        <Tab label="Take Exam" {...a11yProps(0)} sx={{minHeight:"unset",textTransform:"none"}}/>
+                        <Tab label="History"{...a11yProps(1)} sx={{minHeight:"unset",textTransform:"none"}} />
+                    </Tabs>
+                </Box>
+                <TabPanel value={value} index={0}>
+                    <NewExam onSuccess={()=>setValue(1)} />
+                </TabPanel>
+                <TabPanel value={value} index={1}>
+                    <ExamHistory />
+                </TabPanel>
+            </Box>
+        </>
+    )
+}
+
+function NewExam(props){
+    const [subjects,setSubjects] = useState([]);
+    const [books,setBooks] = useState([]);
+    const [rows,setRows] = useState([]);
+    const {hasSubscribed} = useContext(Context);
+
+    const [form,setForm] = useStorage('school-form', {form:0,subject:0});
+
+    const getSubjects = () => {
+        $.get("api/", {getSubjects:"true"}, res=>setSubjects(res));
+    }
+
+    const getBooks = () => {
+        $.get("api/", {getBooks:"true"}, res=>setBooks(res));
+    }
+
+    const filterRecords = (event) => {
+        event.preventDefault();
+
+        $.post("api/", $(event.target).serialize(), response=>{
+            setRows(response);
+        })
+    }
+    
+    useEffect(()=>{
+        getSubjects();
+        getBooks();
+    }, []);
+
+    return (
+        <>
+            <div className="w3-row">
+                <div className="w3-col m2">&nbsp;</div>
+                <div className="w3-col m8 pt-4">
+                    {hasSubscribed ?
+                    <>
+                        <form onSubmit={filterRecords} className="py-2">
+                            <TextField 
+                                label="Subject" 
+                                sx={{width:180}} 
+                                size="small" 
+                                select 
+                                value={form.subject}
+                                onChange={e=>setForm({...form, subject:e.target.value})}
+                                name="subject_exams">
+                                {subjects
+                                .filter(r => (r.checked || r.id == 0))
+                                .map((row,index)=>(
+                                    <MenuItem value={row.id} key={row.id}>{row.name}</MenuItem>
+                                ))}
+                            </TextField>
+
+                            <TextField 
+                                label="Form" 
+                                sx={{width:130,ml:2}} 
+                                size="small" 
+                                select 
+                                value={form.form}
+                                onChange={e=>setForm({...form, form:e.target.value})}
+                                name="form">
+                                {[1,2,3,4].map((row,index)=>(
+                                    <MenuItem value={row} key={row}>{row}</MenuItem>
+                                ))}
+                            </TextField>
+
+                            <TextField 
+                                label="Term" 
+                                sx={{width:130,mx:2}} 
+                                size="small" 
+                                select 
+                                value={form.form}
+                                onChange={e=>setForm({...form, form:e.target.value})}
+                                name="term">
+                                {[1,2,3].map((row,index)=>(
+                                    <MenuItem value={row} key={row}>{row}</MenuItem>
+                                ))}
+                            </TextField>
+
+                            <Button variant="outlined" type="submit">Submit</Button>
+                        </form>
+
+                        <Divider/>
+
+                        {rows.map((row,index)=>(
+                            <ExamView data={row} key={row.id} />
+                        ))}
+
+                        {rows.length == 0 && <Alert severity="error">No exams available for this selection</Alert>}
+                    </>:
+                    <Alert severity="error" sx={{m:3}}>You do not have an active subscription</Alert>}
+                </div>
+            </div>
+        </>
+    )
+}
+
+function ExamView(props){
+    const [data,setData] = useState(props.data);
+    const {page,setPage} = useContext(Context);
+
+    useEffect(()=>{
+        setData(props.data);
+    }, [props.data]);
+
+    return (
+        <>
+            <div className="p-2 mt-3">
+                <Card sx={{ width: '100%',borderRadius:"24px" }}>
+                    <CardHeader
+                        avatar={
+                            <img width={40} style={{borderRadius:"50%"}} src={"../uploads/"+props.data.admin_data.picture} />
+                        }
+                        action={
+                            <Fab size="small" sx={{boxShadow:"none"}}>
+                                <i className="far fa-bookmark text-lg"/>
+                            </Fab>
+                        }
+                        title={props.data.admin_data.name}
+                        subheader={"teacher - "+props.data.ago}
+                    />
+                    <CardContent>
+                        <Typography variant="h4">{props.data.title}</Typography>
+                        <p>{props.data.text}</p>
+
+                        <Box>
+                            <Button onClick={e=>{
+                                localStorage.setItem("lesson", JSON.stringify(data));
+                                setPage("Exam")
+                            }}>Open</Button>
+                        </Box>
+                    </CardContent>
+                </Card>
+            </div>
+        </>
+    )
+}
+
+function Exam(){
+    const [data,setData] = useStorage('lesson', {id:0});
+    const {page,setPage} = useContext(Context);
+    const [questions,setQuestions] = useState([]);
+    const [attachments,setAttachments] = useState([]);
+
+    const getComments = () => {
+        $.get("api/", {getQuestions:data.id}, response=>{
+            try{
+                let res = JSON.parse(response);
+                setQuestions(res)
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        });
+    }
+
+    const getAttachments = () => {
+        $.get("api/", {getAttachments:data.id,type:"lesson"}, res=>setAttachments(res));
+    }
+
+    const fileExtension = (filename) => {
+        let chars = filename.split(".")
+        return chars[chars.length-1].toLowerCase();;
+    }
+
+    const fileType = (filename) => {
+        let ext = fileExtension(filename);
+
+        if(["png","jpg","jpeg","webp","gif"].includes(ext)){
+            return "img";
+        }
+        else{
+            return ext;
+        }
+    }
+
+    const saveAnswers = (event) => {
+        event.preventDefault();
+
+        $.post("api/", $(event.target).serialize(), response=>{
+            try{
+                let res = JSON.parse(response);
+                if(res.status){
+                    Toast("Success");
+                    Toast("View History");
+                    setPage("Exams")
+                }
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
+
+    useEffect(()=>{
+        if(data.id != 0){
+            getComments();
+            getAttachments();
+        }
+    }, []);
+
+    return (
+        <>
+            <div className="w3-row">
+                <div className="w3-col m1">&nbsp;</div>
+                <div className="w3-col m10">
+                    {data.id != 0 && <div className="p-2 mt-3">
+                        <Card sx={{ width: '100%',borderRadius:"24px" }}>
+                            <CardHeader
+                                avatar={
+                                    <img width={40} style={{borderRadius:"50%"}} src={"../uploads/"+data.admin_data.picture} />
+                                }
+                                action={
+                                    <Fab size="small" sx={{boxShadow:"none"}}>
+                                        <i className="far fa-bookmark text-lg"/>
+                                    </Fab>
+                                }
+                                title={data.admin_data.name}
+                                subheader={"teacher - "+data.ago}
+                            />
+                            <CardContent>
+                                <Typography variant="h4">{data.title}</Typography>
+                                <p>{data.text}</p>
+
+                                <div className="flex gap-1 my-2">
+                                    {attachments.map((row,index)=>(
+                                        <>{fileType(row.filename) == "img" ? <>
+                                            <img src={"../uploads/"+row.filename} height={"140"} className="rounded"/>
+                                        </>:
+                                        <>
+                                            <video height={"140"} controls>
+                                                <source src={"../uploads/"+row.filename} className="rounded" type="video/mp4"/>
+                                            </video>
+                                        </>}</>
+                                    ))}
+                                </div>
+
+                                <form onSubmit={saveAnswers}>
+                                    <input type="hidden" name="exam_id_answers" value={data.id}/>
+                                    
+                                    {questions.map((row,index)=>(
+                                        <Question data={row} position={index+1}/>
+                                    ))}
+                                    <Box sx={{py:2}}>
+                                        <Button type="submit">Submit Answers</Button>
+                                    </Box>
+                                </form>
+                            </CardContent>
+                        </Card>
+                    </div>}
+                </div>
+            </div>
+        </>
+    )
+}
+
+function Question(props){
+    return (
+        <>
+            <div className="p-3 w3-border-bottom">
+                {props.position}. {props.data.question}
+                <div>
+                    {props.data.options.map((row,index)=>(
+                        <div className="pl-3">
+                            <input type="radio" name={props.data.id} value={row.id} id={"radio"+row.id}/>
+                            <label className="pl-2" htmlFor={"radio"+row.id}>{row.value}</label>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        </>
+    )
+}
+
+function ExamHistory(){
+    const [rows,setRows] = useState([]);
+    const [progress,setProgress] = useState([]);
+    const [open,setOpen] = useState({
+        progress:false
+    });
+    const [active,setActive] = useState({});
+
+    const getRows = () => {
+        $.get("api/", {getExamHistory:"true"}, res=>setRows(res));
+    }
+
+    useEffect(()=>{
+        getRows();
+    }, []);
+
+    useEffect(()=>{
+        if(active.id != undefined){
+            $.get("api/", {getExamProgress:active.id}, res=>setProgress(res));
+        }
+    }, [active]);
+
+    return (
+        <>
+            <div className="p-2">
+                <Table>
+                    <TableHead>
+                        <TableRow>
+                            <TableCell>#</TableCell>
+                            <TableCell>Exam</TableCell>
+                            <TableCell>Subject</TableCell>
+                            <TableCell>Score</TableCell>
+                            <TableCell>Passed</TableCell>
+                            <TableCell>No. Questions</TableCell>
+                            <TableCell>Date</TableCell>
+                            <TableCell>Action</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {rows.map((row,index)=>(
+                            <TableRow hover>
+                                <TableCell padding="none" sx={{pl:2}}>{index+1}</TableCell>
+                                <TableCell padding="none">{row.exam_data.title}</TableCell>
+                                <TableCell padding="none">{row.course_data.name}</TableCell>
+                                <TableCell padding="none">{row.score}</TableCell>
+                                <TableCell padding="none">{row.pass}</TableCell>
+                                <TableCell padding="none">{row.wrote}</TableCell>
+                                <TableCell padding="none">{row.created_at}</TableCell>
+                                <TableCell sx={{p:1}}>
+                                    <Link href="#" onClick={e=>{
+                                        setActive(row);
+                                        setOpen({...open, progress:true});
+                                    }}>View Progress</Link>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
+
+            <Dialog open={open.progress} onClose={()=>setOpen({...open, progress:false})} maxWidth="xl">
+                <div className="p-3" style={{width:"550px"}}>
+                    <CloseHeading label="View exam progress" onClose={()=>setOpen({...open, progress:false})}/>
+                    {progress.map((row,index)=>(
+                        <div className="py-2 w3-border-bottom">
+                            {row.question_data.question}
+                            {row.options.map((r,i)=>(
+                                <div className={row.answer == r.id ? (row.status == "pass" ? "text-primary" : "text-danger"):""}>{r.label}. {r.value}</div>
+                            ))}
+                        </div>
+                    ))}
+                    <BottomClose onClose={()=>setOpen({...open, progress:false})}/>
+                </div>
+            </Dialog>
+        </>
+    )
+}
+// #endregion
+
