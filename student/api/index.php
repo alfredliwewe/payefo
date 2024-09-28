@@ -275,6 +275,8 @@ elseif (isset($_GET['getRegistration'])) {
 		$data['subjects'] = json_encode($subjects);
 	}
 
+	$data['form'] = (int)$data['form'];
+
 	header('Content-Type: application/json; charset=utf-8');
 	echo json_encode($data);
 }

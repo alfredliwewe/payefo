@@ -1733,9 +1733,27 @@ function Questions(props){
     const saveData = (event) => {
         event.preventDefault();
 
-        //alert($(event.target).serialize());
+        let entire_form = String(($(event.target).serialize()));
+        //validate answer selected
 
-        $.post("api/", $(event.target).serialize(), response=>{
+        let parts = entire_form.split("&"), hasAnswer = false;
+        parts.map(r=>{
+            if(r.startsWith("correct")){
+                hasAnswer = r != "correct="
+            }
+        })
+
+        if(!hasAnswer){
+            Toast("Choose correct answer");
+            return;
+        }
+
+        let formdata = new FormData(event.target);
+        if(attachments.length > 0){
+            formdata.append("attachment", files[0]);
+        }
+
+        post("api/", formdata, response=>{
             try{
                 let res = JSON.parse(response);
                 Toast("Success")
@@ -1748,10 +1766,28 @@ function Questions(props){
         })
     }
 
+    const fileExtension = (filename) => {
+        let chars = filename.split(".")
+        return chars[chars.length-1].toLowerCase();;
+    }
+
+    const fileType = (filename) => {
+        let ext = fileExtension(filename);
+
+        if(["png","jpg","jpeg","webp","gif","tiff"].includes(ext)){
+            return "img";
+        }
+        else{
+            return ext;
+        }
+    }
+
     const chooseFiles = () => {
         let input = document.createElement("input");
         input.type = 'file';
-        input.multiple = 'multiple'
+        //input.multiple = 'multiple';
+        input.accept = 'image/*'
+
         input.addEventListener('change', function(e){
             let files = [], pure_files = [];
             for (let i = 0; i<input.files.length; i++){

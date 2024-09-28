@@ -72,11 +72,18 @@ elseif (isset($_GET['getExams'])) {
 	echo json_encode($rows);
 }
 elseif(isset($_POST['exam_id'], $_POST['question_stmt'], $_POST['numOptions'])){
+	$attachment = "";
+	if (isset($_FILES['attachment'])) {
+		$attachment = $_FILES['attachment']['name'];
+
+		move_uploaded_file($_FILES['attachment']['tmp_name'], "../../uploads/".$attachment);
+	}
+
 	//save exam
 	$insert_id = db_insert("questions",[
 		'exam' => $_POST['exam_id'],
 		'question' => $_POST['question_stmt'],
-		'attachment' => "",
+		'attachment' => $attachment,
 	]);
 
 	for ($i=0; $i < (int)$_POST['numOptions']; $i++) { 

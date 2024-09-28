@@ -105,7 +105,11 @@ function Index(){
     const [settings,setSettings] = useState({
         logo:"clogo.png",
         name:"School"
-    })
+    });
+    const [reg,setReg] = useState({
+        form:1,
+        subjects:""
+    });
     
     const menus = [
         {
@@ -137,7 +141,9 @@ function Index(){
     const getData = () => {
         $.get("api/", {getSettings2:"true"}, res=>{
             setSettings({...settings, ...res});
-        })
+        });
+
+        $.get("api/", {getRegistration:"true"}, res=>setReg(res));
     }
 
     useEffect(()=>{
@@ -145,7 +151,12 @@ function Index(){
     }, []);
 
     return (
-        <Context.Provider value={{page,setPage,hasSubscribed,setHasSubscribed,activeBook,setActiveBook}}>
+        <Context.Provider value={{
+            page,setPage,
+            hasSubscribed,setHasSubscribed,
+            activeBook,setActiveBook,
+            reg,setReg
+        }}>
             <div className="w3-row">
                 <div className="w3-col w3-border-right" style={{height:window.innerHeight+"px",overflow:"auto",width:"200px"}}>
                     <div className="w3-center pt-3 pb-3">
@@ -803,8 +814,9 @@ function TabPanel(props) {
 
 function Registration(){
     const [subjects,setSubjects] = useState([]);
+    const {reg,setReg} = useContext(Context);
     const [data,setData] = useState({
-        form:1,
+        form:0,
         subjects:JSON.stringify(subjects),
         setRegistration:"true"
     })
@@ -814,7 +826,29 @@ function Registration(){
     }
 
     const getRegistration = () =>{
-        $.get("api/", {getRegistration:"true"}, res=>setData({...data, ...res}));
+        $.get("api/", {getRegistration:"true"}, res=>{
+            Toast(JSON.stringify(res));
+            setData(res);
+            setReg(res);
+        });
+    }
+
+    const submitRegister = () => {
+        $.post("api/", data, response=>{
+            try{
+                let res = JSON.parse(response)
+                if(res.status){
+                    Toast("Success");
+                    getRegistration();
+                }
+                else{
+                    Toast(res.message)
+                }
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
     }
 
     useEffect(()=>{
@@ -831,7 +865,7 @@ function Registration(){
 
     useEffect(()=>{
         if(subjects.length > 0){
-            $.post("api/", data, response=>{
+            /*$.post("api/", data, response=>{
                 try{
                     let res = JSON.parse(response)
                     if(res.status){
@@ -841,7 +875,7 @@ function Registration(){
                 catch(E){
                     alert(E.toString()+response);
                 }
-            })
+            })*/
         }
     }, [data])
 
@@ -881,6 +915,10 @@ function Registration(){
                             } label={row.name} />
                         </div>
                     ))}
+
+                    <Box sx={{pt:2,pb:3}}>
+                        <Button variant="contained" onClick={submitRegister}>Save Changes</Button>
+                    </Box>
                 </div>
             </div>
         </>
@@ -1005,7 +1043,7 @@ function AvailableLessons(){
     const [subjects,setSubjects] = useState([]);
     const [books,setBooks] = useState([]);
     const [rows,setRows] = useState([]);
-    const {hasSubscribed} = useContext(Context);
+    const {hasSubscribed,reg,setReg} = useContext(Context);
 
     const [form,setForm] = useStorage('school-form', {form:0,subject:0});
 
@@ -1057,14 +1095,8 @@ function AvailableLessons(){
                                 label="Form" 
                                 sx={{width:180,mx:2}} 
                                 size="small" 
-                                select 
-                                value={form.form}
-                                onChange={e=>setForm({...form, form:e.target.value})}
-                                name="form">
-                                {[1,2,3,4].map((row,index)=>(
-                                    <MenuItem value={row} key={row}>{row}</MenuItem>
-                                ))}
-                            </TextField>
+                                value={reg.form}
+                                name="form"/>
 
                             <Button variant="outlined" type="submit">Submit</Button>
                         </form>
@@ -1484,7 +1516,7 @@ function NewExam(props){
     const [subjects,setSubjects] = useState([]);
     const [books,setBooks] = useState([]);
     const [rows,setRows] = useState([]);
-    const {hasSubscribed} = useContext(Context);
+    const {hasSubscribed,reg,setReg} = useContext(Context);
 
     const [form,setForm] = useStorage('school-form', {form:0,subject:0});
 
@@ -1536,14 +1568,8 @@ function NewExam(props){
                                 label="Form" 
                                 sx={{width:130,ml:2}} 
                                 size="small" 
-                                select 
-                                value={form.form}
-                                onChange={e=>setForm({...form, form:e.target.value})}
-                                name="form">
-                                {[1,2,3,4].map((row,index)=>(
-                                    <MenuItem value={row} key={row}>{row}</MenuItem>
-                                ))}
-                            </TextField>
+                                value={reg.form}
+                                name="form"/>
 
                             <TextField 
                                 label="Term" 

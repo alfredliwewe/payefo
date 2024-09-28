@@ -29,6 +29,24 @@ function getData($table, $array){
 	return $db->query("SELECT * FROM `$table` WHERE ".implode(" AND ", $wheres))->fetch_assoc();
 }
 
+function db_default($table, $extra=null){
+	global $db;
+
+	$read = $db->query("SHOW columns FROM `$table`");
+	$row = [];
+	while ($r = $read->fetch_assoc()) {
+		$row[$r['Field']] = $r['Type'] == "int" ? 0 :"";
+	}
+
+	if ($extra != null) {
+		foreach ($extra as $key => $value) {
+			$row[$key] = $value;
+		}
+	}
+
+	return $row;
+}
+
 function getAll($table, $ref=null){
 	global $db;
 
