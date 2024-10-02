@@ -104,14 +104,14 @@ function Index(){
 
     const makePayment = () => {
         let random = Math.floor((Math.random() * 1000000000) + 1);
-        $.post("api/", {saveRef:random,type:"paychangu"}, res=>{
+        $.post("api/", {saveActivationRef:random,type:"paychangu"}, res=>{
             PaychanguCheckout({
                 "public_key": "pub-live-AkdzhBXueOLvshxcT4icXi8xg9L1WhMB",
                 "tx_ref": '' + random,
                 "amount": settings.reg_fee,
                 "currency": "MWK",
-                //"callback_url": "https://malawi-schools.com/payefo/success-changu.php",
-                "callback_url": "https://localhost/payefo/success-changu.php",
+                //"callback_url": "https://malawi-schools.com/payefo/success-changu-reg.php",
+                "callback_url": "https://localhost/payefo/success-changu-reg.php",
                 "return_url": "https://example.com/returnurl",
                 "customer":{
                     "email": "yourmail@example.com",

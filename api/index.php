@@ -35,18 +35,23 @@ if (isset($_POST['email_login'], $_POST['password'])) {
 			$data = $sqll->fetch_assoc();
 
 			if ($data['password'] == $password) {
-				# success...
-				$_SESSION['user_id'] = $data['id'];
-				$_SESSION['phone'] = $data['phone'];
-				$_SESSION['name'] = $data['name'];
-				//$_SESSION['role'] = $data['role'];
-				$_SESSION['data'] = $data;
+				if ($data['status'] == "deleted") {
+					echo json_encode(['status' => false, 'message' => 'You have been deactivated', 'type' => 'email']);
+				}
+				else{
+					# success...
+					$_SESSION['user_id'] = $data['id'];
+					$_SESSION['phone'] = $data['phone'];
+					$_SESSION['name'] = $data['name'];
+					//$_SESSION['role'] = $data['role'];
+					$_SESSION['data'] = $data;
 
-				$data['status'] = true;
-				$data['link'] = 'teacher/';
+					$data['status'] = true;
+					$data['link'] = 'teacher/';
 
-				//echo json_encode(['status' => true, 'link' => $data['role'].'/']);
-				echo json_encode($data);
+					//echo json_encode(['status' => true, 'link' => $data['role'].'/']);
+					echo json_encode($data);
+				}
 			}
 			else{
 				//

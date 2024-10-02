@@ -6,8 +6,8 @@ require '../../functions.php';
 require '../../includes/String.php';
 $time = time();
 
-//$student_id = $_SESSION['student_id'];
-$student_id = 1;
+$student_id = $_SESSION['student_id'];
+//$student_id = 1;
 
 if (isset($_GET['getSettings2'])) {
 	$data = [];
@@ -248,16 +248,26 @@ elseif (isset($_POST['setRegistration'])) {
 	}
 
 	if ($data != null) {
-		db_update("registration", [
-			'subjects' => implode(",", $selected),
-			'form' => $_POST['form']
-		], ['id' => $data['id']]);
+		if ($time - (int)$data['last_updated'] < (24*3600 * 30 * 2)) {
+			// only update subjects
+			db_update("registration", [
+				'subjects' => implode(",", $selected),
+			], ['id' => $data['id']]);
+		}
+		else{
+			db_update("registration", [
+				'subjects' => implode(",", $selected),
+				'form' => $_POST['form'] > 4 ? 4 : $_POST['form'],
+				'last_updated' => $time
+			], ['id' => $data['id']]);
+		}
 	}
 	else{
 		db_insert("registration", [
 			'student' => $_SESSION['data']['id'],
-			'form' => $_POST['form'],
+			'form' => $_POST['form'] > 4 ? 4 : $_POST['form'],
 			'subjects' => implode(",", $selected),
+			'last_updated' => $time
 		]);
 	}
 
@@ -310,6 +320,19 @@ elseif (isset($_POST['saveRef'], $_POST['type'])) {
 	echo json_encode(['status' => true, 'message' => "Success"]);
 }
 
+elseif (isset($_POST['saveActivationRef'], $_POST['type'])) {
+	db_delete("progress", ['student' => $_SESSION['student_id'], 'type' => $_POST['type']]);
+
+	db_insert("progress", [
+		'student' => $_SESSION['student_id'],
+		'ref' => $_POST['saveActivationRef'],
+		'type' => $_POST['type'],
+		'date_added' => $time,
+	]);
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
+}
+
 elseif(isset($_POST['subject_lessons'], $_POST['form'])){
 	$subject = (int)$_POST['subject_lessons'];
 	$form = (int)$_POST['form'];
@@ -328,7 +351,7 @@ elseif(isset($_POST['subject_lessons'], $_POST['form'])){
 
 	$rows = [];
 
-	$read = $db->query("SELECT * FROM lessons WHERE form = '$form' AND subject = '$subject' AND active_from >= $time AND active_to <= $time ORDER BY id DESC");
+	$read = $db->query("SELECT * FROM lessons WHERE form = '$form' AND subject = '$subject' AND active_from >= '$time' AND active_to <= $time OR active_from <= '$time' AND active_to >= '$time' ORDER BY id DESC"); //AND active_from >= $time AND active_to <= $time
 	while ($row = $read->fetch_assoc()) {
 		$row['admin_data'] = $admins[$row['teacher']];
 		$row['subject_data'] = $subjects[$row['subject']];

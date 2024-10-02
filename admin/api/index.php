@@ -75,7 +75,7 @@ elseif (isset($_GET['getCountries'])) {
 elseif (isset($_GET['getStaff'])) {
 	$data = [];
 
-	$read = $db->query("SELECT * FROM staff ");
+	$read = $db->query("SELECT * FROM staff WHERE status != 'deleted' ");
 	while($row = $read->fetch_assoc()){
 		array_push($data, $row);
 	}
@@ -251,6 +251,26 @@ elseif (isset($_POST['rejectSubscription'])) {
 elseif (isset($_POST['confirmSubscription'])) {
 	db_update("subscriptions", ['status' => 'active'], ['id' => (int)$_POST['confirmSubscription']]);
 	echo "Accepted";
+}
+elseif(isset($_POST['deleteStudent'], $_POST['vf'])){
+	//completely delete the student
+
+	db_delete("students", ['id' => $_POST['deleteStudent']]);
+
+	db_delete("comments", ['user' => $_POST['deleteStudent'], 'user_type' => 'student']);
+
+	db_delete("progress", ['student' => $_POST['deleteStudent']]);
+	db_delete("registration", ['student' => $_POST['deleteStudent']]);
+	db_delete("response_progress", ['student' => $_POST['deleteStudent']]);
+	db_delete("response_summary", ['student' => $_POST['deleteStudent']]);
+	db_delete("subscriptions", ['user' => $_POST['deleteStudent']]);
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
+}
+elseif(isset($_POST['deleteStaff'], $_POST['vf'])){
+	db_update("staff", ['status' => 'deleted'], ['id' => $_POST['deleteStaff']]);
+
+	echo json_encode(['status' => true, 'message' => "Success"]);
 }
 elseif (isset($_POST['country_id'], $_POST['edit_country'], $_POST['currency'], $_POST['rating'], $_POST['currency_code'])) {
 	db_update("countries", [

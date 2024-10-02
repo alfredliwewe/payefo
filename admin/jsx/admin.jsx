@@ -636,7 +636,8 @@ function AvailableStaff(){
     const [active,setActive] = useState({});
     const [open,setOpen] = useState({
         add:false,
-        edit:false
+        edit:false,
+        delete:false
     });
     const [selectedPermissions, setSelectedPermissions] = useState([]);
 
@@ -720,10 +721,15 @@ function AvailableStaff(){
                                 <TableCell padding="none">{row.picture}</TableCell>
                                 <TableCell padding="none">{row.status}</TableCell>
                                 <TableCell sx={{padding:"7px"}}>
-                                    <Button variant="contained" size="small" onClick={e=>{
+                                    <Link href="#" onClick={e=>{
                                         setActive(row);
                                         setOpen({...open, edit:true});
-                                    }}>Edit</Button>
+                                    }}>Edit</Link>
+                                    
+                                    <Link href="#" sx={{ml:2}} color="error" onClick={e=>{
+                                        setActive(row);
+                                        setOpen({...open, delete:true});
+                                    }}>Delete</Link>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -822,6 +828,34 @@ function AvailableStaff(){
                     <BottomClose onClose={()=>setOpen({...open, edit:false})}/>
                 </div>
             </Drawer>
+
+            {open.delete && <Warning
+                title="Delete Staff"
+                secondaryText={`Are you sure you want to delete ${active.name} ?`}
+                action={{
+                    text:"Confirm",
+                    callback:()=>{
+                        $.post("api/", {deleteStaff:active.id,vf:"true"}, response=>{
+                            try{
+                                let res = JSON.parse(response);
+                                if(res.status){
+                                    setOpen({...open, delete:false});
+                                    //props.onCancel();
+                                    Toast("Success");
+                                    getRows();
+                                }
+                                else{
+                                    Toast(res.message);
+                                }
+                            }
+                            catch(E){
+                                alert(E.toString()+response);
+                            }
+                        })
+                    }
+                }}
+                onClose={()=>setOpen({...open, delete:false})}
+            />}
         </>
     )
 }
@@ -913,16 +947,49 @@ function Students(){
                                 <TableCell padding="none">{row.picture}</TableCell>
                                 <TableCell padding="none">{row.status}</TableCell>
                                 <TableCell sx={{padding:"7px"}}>
-                                    <Button variant="contained" size="small" onClick={e=>{
+                                    <Link href="#" size="small" onClick={e=>{
                                         setActive(row);
                                         setOpen({...open, edit:true});
-                                    }}>Edit</Button>
+                                    }}>Edit</Link>
+                                    
+                                    <Link href="#" size="small" color="error" sx={{ml:2}} onClick={e=>{
+                                        setActive(row);
+                                        setOpen({...open, delete:true});
+                                    }}>Delete</Link>
                                 </TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
                 </Table>
             </Box>
+
+            {open.delete && <Warning
+                title="Delete Student"
+                secondaryText={`Are you sure you want to delete ${active.name} ?`}
+                action={{
+                    text:"Confirm",
+                    callback:()=>{
+                        $.post("api/", {deleteStudent:active.id,vf:"true"}, response=>{
+                            try{
+                                let res = JSON.parse(response);
+                                if(res.status){
+                                    setOpen({...open, delete:false});
+                                    //props.onCancel();
+                                    Toast("Success");
+                                    getRows();
+                                }
+                                else{
+                                    Toast(res.message);
+                                }
+                            }
+                            catch(E){
+                                alert(E.toString()+response);
+                            }
+                        })
+                    }
+                }}
+                onClose={()=>setOpen({...open, delete:false})}
+            />}
         </>
     )
 }
@@ -1629,3 +1696,50 @@ function post(url, formdata, callback){
     ajax.open("POST", url);
     ajax.send(formdata);
 }
+
+/*
+function Warning(props){
+    const [open,setOpen] = useState(true);
+
+    useEffect(()=>{
+        if(!open){
+            if(props.onClose!= undefined){
+                props.onClose();
+            }
+        }
+    }, [open]);
+
+    return (
+        <Dialog open={open} onClose={()=>{
+            setOpen(false)
+            if(props.onClose!= undefined){
+                props.onClose();
+            }
+        }}>
+            <div className="w3-padding-large" style={{width:"300px"}}>
+                {props.title != undefined && <font className="w3-large block mb-30 block">{props.title}</font>}
+
+                {props.secondaryText != undefined && <font className="block mb-15">{props.secondaryText}</font>}
+
+                {props.view != undefined && <div className="py-2">{props.view}</div>}
+                
+                <div className="py-2 clearfix">
+                    <Button variant="contained" color="error" className="w3-round-xxlarge" sx={{textTransform:"none"}} onClick={event=>{
+                        setOpen(false)
+                        if(props.onClose!= undefined){
+                            props.onClose();
+                        }
+                    }}>Close</Button>
+                    <span className="float-right">
+                        
+                        {props.action != undefined && <Button sx={{textTransform:"none"}} className="w3-round-xxlarge" variant="contained" onClick={event=>{
+                            //setLogout(false);
+                            props.action.callback();
+                        }}>{props.action.text}</Button>}
+                    </span>
+                </div>
+            </div>
+        </Dialog>
+    )
+}
+*/

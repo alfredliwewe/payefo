@@ -1217,6 +1217,24 @@ function Registration(){
         $.get("api/", {getRegistration:"true"}, res=>setData({...data, ...res}));
     }
 
+    const submitRegister = () => {
+        $.post("api/", data, response=>{
+            try{
+                let res = JSON.parse(response)
+                if(res.status){
+                    Toast("Success");
+                    getRegistration();
+                }
+                else{
+                    Toast(res.message)
+                }
+            }
+            catch(E){
+                alert(E.toString()+response);
+            }
+        })
+    }
+
     useEffect(()=>{
         getSubjects();
         getRegistration();
@@ -1231,7 +1249,7 @@ function Registration(){
 
     useEffect(()=>{
         if(subjects.length > 0){
-            $.post("api/", data, response=>{
+            /*$.post("api/", data, response=>{
                 try{
                     let res = JSON.parse(response)
                     if(res.status){
@@ -1241,7 +1259,7 @@ function Registration(){
                 catch(E){
                     alert(E.toString()+response);
                 }
-            })
+            })*/
         }
     }, [data])
 
@@ -1281,6 +1299,10 @@ function Registration(){
                             } label={row.name} />
                         </div>
                     ))}
+
+                    <Box sx={{pt:2,pb:3}}>
+                        <Button variant="contained" onClick={submitRegister}>Save Changes</Button>
+                    </Box>
                 </div>
             </div>
         </>

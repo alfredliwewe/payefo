@@ -213,7 +213,8 @@ function Home(){
     const [data,setData] = useState({
         
     });
-    const {page,setPage,hasSubscribed,setHasSubscribed} = useContext(Context);
+    const [user,setUser] = useState({});
+    const {page,setPage,hasSubscribed,setHasSubscribed,reg,setReg} = useContext(Context);
     const [subscriptions,setSubscriptions] = useState([]);
 
     const [packages,setPackages] = useState([]);
@@ -294,9 +295,16 @@ function Home(){
         return new Intl.NumberFormat().format(num);
     }
 
+    const getUser = () => {
+        $.get("api/", {getUser:"true"}, function(res){
+            setUser(res);
+        })
+    }
+
     useEffect(()=>{
         getData();
         getPackages();
+        getUser();
     }, []);
 
     useEffect(()=>{
@@ -323,6 +331,13 @@ function Home(){
                     {subscriptions.length == 0 && <div>
                         <Alert severity="error">You do not have an active subscription</Alert>
                     </div>}
+
+                    <div className="pt-40">
+                        <Paper sx={{borderRadius:"24px",p:2}}>
+                            <Typography variant="h5">{user.name}</Typography>
+                            <Typography>Registered form: {reg.form}</Typography>
+                        </Paper>
+                    </div>
                 </div>
 
                 <div className="w3-half p-3">
@@ -827,8 +842,8 @@ function Registration(){
 
     const getRegistration = () =>{
         $.get("api/", {getRegistration:"true"}, res=>{
-            Toast(JSON.stringify(res));
-            setData(res);
+            //Toast(JSON.stringify(res));
+            setData({...data, ...res});
             setReg(res);
         });
     }
@@ -888,13 +903,13 @@ function Registration(){
                     <TextField
                         label="Form"
                         fullWidth
-                        select
+                        type="number"
                         value={data.form}
                         onChange={e=>setData({...data, form:e.target.value})}
                         size="small">
-                        {[1,2,3,4].map((row,index)=>(
+                        {/*[1,2,3,4].map((row,index)=>(
                             <MenuItem value={row}>{row}</MenuItem>
-                        ))}
+                        ))*/}
                     </TextField>
                     
                     <Alert severity="info" sx={{my:3}}>Tick the subjects you want to register</Alert>
@@ -1231,6 +1246,9 @@ function Lesson(){
                                     {attachments.map((row,index)=>(
                                         <>{fileType(row.filename) == "img" ? <>
                                             <img src={"../uploads/"+row.filename} height={"140"} className="rounded"/>
+                                        </>:
+                                        fileType(row.filename) == "pdf" ? <>
+                                            <iframe src={"../uploads/"+row.filename} height={"140"} className="rounded border-0 border-none"/>
                                         </>:
                                         <>
                                             <video height={"140"} controls>
@@ -1735,9 +1753,7 @@ function Exam(){
                                             <img src={"../uploads/"+row.filename} height={"140"} className="rounded"/>
                                         </>:
                                         <>
-                                            <video height={"140"} controls>
-                                                <source src={"../uploads/"+row.filename} className="rounded" type="video/mp4"/>
-                                            </video>
+                                            <img src={"../uploads/"+row.filename} height={"140"} className="rounded"/>
                                         </>}</>
                                     ))}
                                 </div>
